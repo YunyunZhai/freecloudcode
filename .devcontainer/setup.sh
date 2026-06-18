@@ -190,21 +190,5 @@ else
     done
 fi
 
-echo ""
-echo "========================================="
-echo " 🔧 首次配置（需要手动完成）"
-echo "========================================="
-echo ""
-echo "  1. Tailscale 认证:"
-echo "     sudo tailscale up --ssh"
-echo ""
-echo "  2. OmniRoute 配置（按需）:"
-echo "     oc  # 启动后按提示配置 API key"
-echo ""
-echo "  3. 配置完成后重启终端即可使用所有工具"
-echo ""
-echo "  常用命令: cc claude | codex | oc omniroute | ccli cloudcli"
-echo "========================================="
-
 # 写入完成标记，确保下次不重复执行
 touch "$SETUP_MARKER"

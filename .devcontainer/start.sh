@@ -23,15 +23,20 @@ echo "========================================="
 echo " FreeCloudCode — 启动服务"
 echo "========================================="
 
-# ===== 1. 启动 tailscaled =====
+# ===== 1. 启动 Tailscale =====
 if ! pgrep -f "tailscaled" > /dev/null 2>&1; then
     echo "⟳ 启动 tailscaled..."
     nohup sudo tailscaled </dev/null > /tmp/tailscaled.log 2>&1 &
     disown
-    sleep 2
-    pgrep -f "tailscaled" > /dev/null 2>&1 && echo "✓ tailscaled 启动成功" || echo "✗ tailscaled 启动失败"
+    sleep 3
+fi
+if pgrep -f "tailscaled" > /dev/null 2>&1; then
+    echo "✓ tailscaled 已运行"
+    echo "⟳ 连接 Tailscale 网络..."
+    sudo tailscale up --ssh 2>&1 | tail -3
+    echo "✓ Tailscale 已连接"
 else
-    echo "✓ tailscaled 已在运行"
+    echo "✗ tailscaled 启动失败"
 fi
 
 # ===== 2. tmux 启动辅助函数 =====
@@ -66,4 +71,29 @@ _tmux_run cloudcli  "cloudcli"  "cloudcli"  "CloudCLI" 3001
 echo ""
 echo "📌 服务已就绪"
 echo "   手动控制: scc(启动CloudCLI) xcc(停止)  sbp(启动Bridge) xbp(停止)"
+
+# 首次配置引导（只显示一次）
+CONFIG_GUIDE="$HOME/.freecloudcode.config.done"
+if [ ! -f "$CONFIG_GUIDE" ]; then
+    echo ""
+    echo "========================================="
+    echo " 🔧 首次配置（需要手动完成）"
+    echo "========================================="
+    echo ""
+    echo "  1. Tailscale 认证:"
+    echo "     sudo tailscale up --ssh"
+    echo ""
+    echo "  2. OmniRoute 配置:"
+    echo "     oc  # 启动服务"
+    echo "     浏览器打开 http://localhost:20128 或 Tailscale IP 进行配置"
+    echo ""
+    echo "  3. 迁移旧配置:"
+    echo "     将旧 Codespace 的 .env 和 storage.sqlite 复制到本机对应目录即可"
+    echo ""
+    echo "  4. 配置完成后重启终端即可使用所有工具"
+    echo ""
+    echo "  常用命令: cc claude | codex | oc omniroute | ccli cloudcli"
+    echo "========================================="
+    touch "$CONFIG_GUIDE"
+fi
 echo ""
