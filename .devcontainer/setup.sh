@@ -78,8 +78,12 @@ done
 BASHRC="$HOME/.bashrc"
 MARKER="# >>> FreeCloudCode >>>"
 
-if ! grep -q "$MARKER" "$BASHRC" 2>/dev/null; then
-    cat >> "$BASHRC" << 'BASHRC_BLOCK'
+# 先删除旧配置块（如果存在），再写入新配置
+if grep -q "$MARKER" "$BASHRC" 2>/dev/null; then
+    sed -i "/# >>> FreeCloudCode >>>/,/# <<< FreeCloudCode <<</d" "$BASHRC"
+fi
+
+cat >> "$BASHRC" << 'BASHRC_BLOCK'
 
 # >>> FreeCloudCode >>>
 alias cc='claude'
@@ -103,17 +107,17 @@ fi
 echo "🌊 FreeCloudCode ready! cc/codex/oc/ccli/pocket"
 # <<< FreeCloudCode <<<
 BASHRC_BLOCK
-    echo "✅ .bashrc 已配置（新终端生效）"
-else
-    echo "✓ .bashrc 已配置"
-fi
+echo "✅ .bashrc 已配置"
 
 # ===== 5b. 配置 .profile（login shell，如 SSH） =====
 PROFILE="$HOME/.profile"
 PROFILE_MARKER="# >>> FreeCloudCode >>>"
 
-if ! grep -q "$PROFILE_MARKER" "$PROFILE" 2>/dev/null; then
-    cat >> "$PROFILE" << 'PROFILE_BLOCK'
+if grep -q "$PROFILE_MARKER" "$PROFILE" 2>/dev/null; then
+    sed -i "/# >>> FreeCloudCode >>>/,/# <<< FreeCloudCode <<</d" "$PROFILE"
+fi
+
+cat >> "$PROFILE" << 'PROFILE_BLOCK'
 
 # >>> FreeCloudCode >>>
 alias cc='claude'
