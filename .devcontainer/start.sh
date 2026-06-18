@@ -32,9 +32,6 @@ if ! pgrep -f "tailscaled" > /dev/null 2>&1; then
 fi
 if pgrep -f "tailscaled" > /dev/null 2>&1; then
     echo "✓ tailscaled 已运行"
-    echo "⟳ 连接 Tailscale 网络..."
-    sudo tailscale up --ssh 2>&1 | tail -3
-    echo "✓ Tailscale 已连接"
 else
     echo "✗ tailscaled 启动失败"
 fi
@@ -94,7 +91,7 @@ if [ ! -f "$CONFIG_GUIDE" ]; then
     echo "========================================="
     echo ""
     echo "  1. Tailscale 认证（首次会弹出浏览器）:"
-    echo "     已自动执行 sudo tailscale up --ssh"
+    echo "     sudo tailscale up --ssh"
     echo "     按提示在浏览器中完成认证即可"
     echo ""
     echo "  2. claude-sync 配置:"
