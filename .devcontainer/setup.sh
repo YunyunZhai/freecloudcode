@@ -104,7 +104,14 @@ if command -v claude-sync &>/dev/null; then
     (claude-sync pull -q && claude-sync push -q) &>/dev/null &
 fi
 
-echo "🌊 FreeCloudCode ready! cc/codex/oc/ccli/pocket"
+echo ""
+echo "🌊 FreeCloudCode 命令速查:"
+echo "  cc    — Claude Code        codex — OpenAI Codex"
+echo "  oc    — OmniRoute          ccli  — CloudCLI"
+echo "  pocket — CCPocket Bridge   cr    — 重连 Claude 会话"
+echo "  scc   — 启动 CloudCLI      xcc   — 停止"
+echo "  sbp   — 启动 Bridge        xbp   — 停止"
+echo ""
 # <<< FreeCloudCode <<<
 BASHRC_BLOCK
 echo "✅ .bashrc 已配置"
@@ -132,13 +139,17 @@ if command -v claude-sync &>/dev/null; then
     (claude-sync pull -q && claude-sync push -q) &>/dev/null &
 fi
 
-echo "🌊 FreeCloudCode ready! cc/codex/oc/ccli/pocket"
+echo ""
+echo "🌊 FreeCloudCode 命令速查:"
+echo "  cc    — Claude Code        codex — OpenAI Codex"
+echo "  oc    — OmniRoute          ccli  — CloudCLI"
+echo "  pocket — CCPocket Bridge   cr    — 重连 Claude 会话"
+echo "  scc   — 启动 CloudCLI      xcc   — 停止"
+echo "  sbp   — 启动 Bridge        xbp   — 停止"
+echo ""
 # <<< FreeCloudCode <<<
 PROFILE_BLOCK
-    echo "✅ .profile 已配置（login shell 生效）"
-else
-    echo "✓ .profile 已配置"
-fi
+echo "✅ .profile 已配置（login shell 生效）"
 
 # ===== 6. 安装检查 =====
 echo ""
@@ -165,7 +176,7 @@ for cmd in "${MISSING[@]}"; do
         cloudcli)    ALL_FAILED+=("cloudcli: npm install -g @cloudcli-ai/cloudcli") ;;
         codex)       ALL_FAILED+=("codex: npm install -g @openai/codex") ;;
         ccpocket-bridge) ALL_FAILED+=("ccpocket-bridge: npm install -g @ccpocket/bridge") ;;
-        claude-sync) ALL_FAILED+=("claude-sync: npm install -g claude-sync") ;;
+        claude-sync) ALL_FAILED+=("claude-sync: npm install -g @tawandotorg/claude-sync") ;;
     esac
 done
 

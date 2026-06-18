@@ -21,7 +21,7 @@ A pre-configured GitHub Codespace with all your favorite cloud development tools
 
 ## Services
 
-On every restart, **OmniRoute** and **CloudCLI** auto-launch in tmux sessions. Manage them with:
+On every restart, **OmniRoute** (daemon) and **CloudCLI** (tmux) auto-start. Manage them with:
 
 ```
 scc  — start CloudCLI    xcc — stop

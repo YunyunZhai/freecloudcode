@@ -14,7 +14,7 @@ The project is a devcontainer-only setup — no application code, just the envir
   - `onCreateCommand` → `setup.sh` (first-time install only)
   - `postStartCommand` → `start.sh` (every startup)
 - **`.devcontainer/setup.sh`** — One-time setup (runs on first Codespace creation). Installs system deps, Tailscale, Claude Code, npm tools, and writes aliases + service management functions to `~/.bashrc`.
-- **`.devcontainer/start.sh`** — Every-boot startup (runs on every restart). Starts `tailscaled`, OmniRoute, and CloudCLI in tmux sessions.
+- **`.devcontainer/start.sh`** — Every-boot startup (runs on every restart). Starts `tailscaled`, connects Tailscale network, launches OmniRoute (daemon mode) and CloudCLI (tmux session).
 
 ### Why Two Scripts?
 

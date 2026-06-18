@@ -70,7 +70,7 @@ if command -v omniroute &>/dev/null; then
         echo "✓ OmniRoute 已在运行"
     else
         echo "⟳ 启动 OmniRoute..."
-        omniroute serve --daemon 2>/dev/null
+        omniroute serve --daemon > /tmp/omniroute.log 2>&1
         sleep 2
         pgrep -f "omniroute" > /dev/null 2>&1 && echo "✓ OmniRoute 启动成功" || echo "✗ OmniRoute 启动失败"
     fi
@@ -93,19 +93,22 @@ if [ ! -f "$CONFIG_GUIDE" ]; then
     echo " 🔧 首次配置（需要手动完成）"
     echo "========================================="
     echo ""
-    echo "  1. Tailscale 认证:"
-    echo "     sudo tailscale up --ssh"
+    echo "  1. Tailscale 认证（首次会弹出浏览器）:"
+    echo "     已自动执行 sudo tailscale up --ssh"
+    echo "     按提示在浏览器中完成认证即可"
     echo ""
-    echo "  2. OmniRoute 配置:"
-    echo "     oc  # 启动服务"
-    echo "     浏览器打开 http://localhost:20128 或 Tailscale IP 进行配置"
+    echo "  2. claude-sync 配置:"
+    echo "     claude-sync init  # 按提示配置 Cloudflare R2 等信息"
+    echo ""
+    echo "  3. OmniRoute 配置:"
+    echo "     已自动启动，浏览器打开 http://localhost:20128 或 Tailscale IP 进行配置"
     echo ""
     echo "  3. 迁移旧配置:"
     echo "     将旧 OmniRoute 的 .env 和 storage.sqlite 复制到本机对应目录即可"
     echo ""
-    echo "  4. 配置完成后重启终端即可使用所有工具"
-    echo ""
-    echo "  常用命令: cc claude | codex | oc omniroute | ccli cloudcli"
+    echo "  4. 常用命令:"
+    echo "     cc claude | codex | oc omniroute | ccli cloudcli"
+    echo "     scc 启动CloudCLI | xcc 停止 | sbp 启动Bridge | xbp 停止"
     echo "========================================="
     touch "$CONFIG_GUIDE"
 fi
