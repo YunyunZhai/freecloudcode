@@ -64,9 +64,22 @@ _tmux_run() {
     fi
 }
 
-# ===== 3. 启动 OmniRoute + CloudCLI =====
-_tmux_run omniroute "omniroute" "omniroute" "OmniRoute"
-_tmux_run cloudcli  "cloudcli"  "cloudcli"  "CloudCLI" 3001
+# ===== 3. 启动 OmniRoute =====
+if command -v omniroute &>/dev/null; then
+    if pgrep -f "omniroute" > /dev/null 2>&1; then
+        echo "✓ OmniRoute 已在运行"
+    else
+        echo "⟳ 启动 OmniRoute..."
+        omniroute serve --daemon 2>/dev/null
+        sleep 2
+        pgrep -f "omniroute" > /dev/null 2>&1 && echo "✓ OmniRoute 启动成功" || echo "✗ OmniRoute 启动失败"
+    fi
+else
+    echo "⚠ OmniRoute 未安装，跳过"
+fi
+
+# ===== 4. 启动 CloudCLI =====
+_tmux_run cloudcli "cloudcli" "cloudcli" "CloudCLI" 3001
 
 echo ""
 echo "📌 服务已就绪"
