@@ -102,6 +102,7 @@ if [ ! -f "$CONFIG_GUIDE" ]; then
     echo ""
     echo "  3. 迁移旧配置:"
     echo "     将旧 OmniRoute 的 .env 和 storage.sqlite 复制到本机对应目录即可"
+    echo "     scp storage.sqlite codespace@{tailscaleip}:/home/codespace/.omniroute
     echo ""
     echo "  4. 常用命令:"
     echo "     cc claude | codex | oc omniroute | ccli cloudcli"
