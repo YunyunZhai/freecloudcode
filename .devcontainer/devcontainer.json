@@ -6,7 +6,8 @@
       "version": "lts"
     }
   },
-  "postStartCommand": "bash .devcontainer/startservice.sh",
+  "onCreateCommand": "bash .devcontainer/setup.sh",
+  "postStartCommand": "bash .devcontainer/start.sh",
   "customizations": {
     "vscode": {
       "extensions": [

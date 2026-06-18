@@ -7,7 +7,7 @@ A pre-configured GitHub Codespace with all your favorite cloud development tools
 | Tool | Command | Alias |
 |------|---------|-------|
 | Claude Code | `claude` | `cc` |
-| OpenAI Codex | `openai-codex` | `codex` |
+| OpenAI Codex | `codex` | `codex` |
 | OmniRoute | `omniroute` | `oc` |
 | Tailscale | `tailscale` | — |
 | CloudCLI | `cloudcli` | `ccli` |
@@ -21,15 +21,23 @@ A pre-configured GitHub Codespace with all your favorite cloud development tools
 
 ## Services
 
-On startup, **OmniRoute** and **CloudCLI** auto-launch in tmux sessions. Manage them with:
+On every restart, **OmniRoute** and **CloudCLI** auto-launch in tmux sessions. Manage them with:
 
 ```
-cc   — start CloudCLI    xcc — stop
-cp   — start Bridge      xcp — stop
+scc  — start CloudCLI    xcc — stop
+sbp  — start Bridge      xbp — stop
 cr   — reconnect Claude session
 ```
 
 ## How It Works
 
 - `.devcontainer/devcontainer.json` — Codespace config (host mode, no Docker)
-- `.devcontainer/startservice.sh` — runs on every startup, installs tools + starts services
+- `.devcontainer/setup.sh` — **one-time** install (runs on first creation via `onCreateCommand`)
+- `.devcontainer/start.sh` — **every boot** startup (runs via `postStartCommand`)
+
+## 首次配置
+
+```bash
+sudo tailscale up --ssh    # Tailscale 认证
+oc                         # 按提示配置 OmniRoute API key
+```

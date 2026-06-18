@@ -11,7 +11,7 @@ echo "========================================="
 # ===== 1. 启动 tailscaled =====
 if ! pgrep -f "tailscaled" > /dev/null 2>&1; then
     echo "⟳ 启动 tailscaled..."
-    nohup sudo tailscaled --tun=userspace-networking </dev/null > /tmp/tailscaled.log 2>&1 &
+    nohup sudo tailscaled </dev/null > /tmp/tailscaled.log 2>&1 &
     disown
     sleep 2
     pgrep -f "tailscaled" > /dev/null 2>&1 && echo "✓ tailscaled 启动成功" || echo "✗ tailscaled 启动失败"
@@ -42,5 +42,5 @@ _tmux_run cloudcli  "cloudcli"  "cloudcli"  "CloudCLI" 3001
 
 echo ""
 echo "📌 服务已就绪"
-echo "   手动控制: scli(启动CloudCLI) xcli(停止)  sbridge(启动Bridge) xbridge(停止)"
+echo "   手动控制: scc(启动CloudCLI) xcc(停止)  sbp(启动Bridge) xbp(停止)"
 echo ""
