@@ -101,7 +101,7 @@ if [ ! -f "$CONFIG_GUIDE" ]; then
     echo "     浏览器打开 http://localhost:20128 或 Tailscale IP 进行配置"
     echo ""
     echo "  3. 迁移旧配置:"
-    echo "     将旧 Codespace 的 .env 和 storage.sqlite 复制到本机对应目录即可"
+    echo "     将旧 OmniRoute 的 .env 和 storage.sqlite 复制到本机对应目录即可"
     echo ""
     echo "  4. 配置完成后重启终端即可使用所有工具"
     echo ""

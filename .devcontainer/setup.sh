@@ -58,7 +58,7 @@ NPM_PACKAGES=(
     "@cloudcli-ai/cloudcli"
     "@openai/codex"
     "@ccpocket/bridge"
-    "claude-sync"
+    "@tawandotorg/claude-sync"
 )
 for pkg in "${NPM_PACKAGES[@]}"; do
     if ! npm list -g "$pkg" &>/dev/null; then
