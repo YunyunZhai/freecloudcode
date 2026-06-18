@@ -2,6 +2,14 @@
 # setup.sh — FreeCloudCode 一次性安装配置
 # 由 devcontainer.json 的 onCreateCommand 触发，仅首次创建 Codespace 时运行
 
+SETUP_MARKER="$HOME/.freecloudcode.setup.done"
+
+# 幂等检查：只执行一次
+if [ -f "$SETUP_MARKER" ]; then
+    echo "✓ FreeCloudCode 已初始化，跳过 setup"
+    exit 0
+fi
+
 FAILED=()  # 记录安装失败的项目
 
 echo "========================================="
@@ -193,3 +201,6 @@ echo "  3. 配置完成后重启终端即可使用所有工具"
 echo ""
 echo "  常用命令: cc claude | codex | oc omniroute | ccli cloudcli"
 echo "========================================="
+
+# 写入完成标记，确保下次不重复执行
+touch "$SETUP_MARKER"
