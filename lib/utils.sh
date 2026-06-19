@@ -133,6 +133,7 @@ query_tailscale() {
 }
 
 # query_omniroute [addr] — 输出 OmniRoute 状态行
+# 优先用 omniroute health CLI 检测（更准确），fallback 到 HTTP 检查
 query_omniroute() {
     local addr="${1:-localhost}"
 
@@ -141,7 +142,14 @@ query_omniroute() {
         return
     fi
 
-    if http_check_retry "http://${addr}:20128" 3 2 2; then
+    # 优先: omniroute health（CLI 直接检测服务状态）
+    if omniroute health -q >/dev/null 2>&1; then
+        echo "ok|OmniRoute|http://${addr}:20128"
+        return
+    fi
+
+    # Fallback: HTTP 检查（health 可能因版本不支持而失败）
+    if http_check_retry "http://${addr}:20128" 2 2 2; then
         echo "ok|OmniRoute|http://${addr}:20128"
     else
         echo "fail|OmniRoute|http://${addr}:20128"
