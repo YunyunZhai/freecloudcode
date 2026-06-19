@@ -69,6 +69,15 @@ if [ ! -f "$CONFIG_HINT_SHOWN" ]; then
         display_status_line "$status" "CloudCLI" "$hint"
     fi
 
+    # claude-sync
+    if check_command claude-sync; then
+        if claude-sync status -q 2>/dev/null; then
+            display_status_line "ok" "claude-sync" "已配置"
+        else
+            display_status_line "skip" "claude-sync" "未配置（需运行: claude-sync init）"
+        fi
+    fi
+
     # 安装检查
     echo "" >&2
     echo "=========================================" >&2
