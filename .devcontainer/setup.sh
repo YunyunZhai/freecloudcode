@@ -50,17 +50,24 @@ result=$(query_tailscale)
 IFS='|' read -r status _ hint <<< "$result"
 display_status_line "$status" "Tailscale" "$hint"
 if [ "$status" = "skip" ]; then
-    echo "     方式1: 设置环境变量 TAILSCALEAUTHKEY 后重新创建容器"
-    echo "     方式2: 在终端运行: sudo tailscale up --ssh"
+    echo "     方式1（推荐）: 创建容器时设置环境变量 TAILSCALEAUTHKEY"
+    echo "     方式2: 终端运行: sudo tailscale up --ssh"
+    echo "     认证后可从其他设备通过 Tailscale IP 访问服务"
 fi
 
 # OmniRoute
 result=$(query_omniroute "${ts_ip:-localhost}")
 IFS='|' read -r status _ hint <<< "$result"
 if [ "$status" = "skip" ]; then
-    display_status_line "skip" "OmniRoute" "未配置（首次使用需运行: oc）"
+    display_status_line "skip" "OmniRoute" "未配置"
+    echo "     运行: oc（首次使用需配置 API key）"
+    echo "     迁移旧数据: scp storage.sqlite codespace@<tailscale-ip>:~/.omniroute/"
+    echo "                  scp .env codespace@<tailscale-ip>:~/.omniroute/"
 elif [ "$status" = "fail" ]; then
-    display_status_line "ok" "OmniRoute" "已安装（首次使用需运行: oc 配置 API key）"
+    display_status_line "ok" "OmniRoute" "已安装"
+    echo "     运行: oc（配置 API key）"
+    echo "     迁移旧数据: scp ~/.omniroute/storage.sqlite codespace@<tailscale-ip>:~/.omniroute/"
+    echo "                  scp ~/.omniroute/.env codespace@<tailscale-ip>:~/.omniroute/"
 else
     display_status_line "$status" "OmniRoute" "$hint"
 fi
