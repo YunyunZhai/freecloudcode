@@ -144,8 +144,8 @@ query_omniroute() {
         return
     fi
 
-    # Fallback: HTTP 检查（health 可能因版本不支持而失败）
-    if http_check_retry "http://${addr}:20128" 2 2 2; then
+    # Fallback: HTTP 检查（health 可能因版本不支持而失败，OmniRoute 只监听 localhost）
+    if http_check_retry "http://localhost:20128" 2 2 2; then
         echo "ok|OmniRoute|http://${addr}:20128"
     else
         echo "fail|OmniRoute|http://${addr}:20128"

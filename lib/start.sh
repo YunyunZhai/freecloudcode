@@ -31,12 +31,12 @@ start_omniroute() {
         return
     fi
 
-    if http_check_retry "http://${host}:20128" 3 2 2; then
+    if http_check_retry "http://localhost:20128" 3 2 2; then
         record "OmniRoute" "ok" "" "http://${host}:20128"
     else
         omniroute serve --daemon > "$LOG_DIR/omniroute.log" 2>&1
         sleep 8
-        if http_check_retry "http://${host}:20128" 3 2 2; then
+        if http_check_retry "http://localhost:20128" 3 2 2; then
             record "OmniRoute" "ok" "" "http://${host}:20128"
         else
             record "OmniRoute" "fail" "$LOG_DIR/omniroute.log" "启动失败"
