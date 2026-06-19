@@ -7,11 +7,11 @@ SETUP_MARKER="$HOME/.freecloudcode.setup.done"
 STARTUP_MARKER="$HOME/.freecloudcode/startup-done"
 LOG_DIR="$HOME/.freecloudcode/logs"
 
-# ===== 日志函数 =====
-log_info()    { echo "ℹ️  $1"; }
-log_success() { echo "✅ $1"; }
-log_warn()    { echo "⚠️  $1"; }
-log_error()   { echo "❌ $1"; }
+# ===== 日志函数（输出到 stderr，避免污染 $() 捕获） =====
+log_info()    { echo "ℹ️  $1" >&2; }
+log_success() { echo "✅ $1" >&2; }
+log_warn()    { echo "⚠️  $1" >&2; }
+log_error()   { echo "❌ $1" >&2; }
 
 # ===== 基础检查 =====
 check_command() { command -v "$1" &>/dev/null; }

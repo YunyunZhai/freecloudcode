@@ -47,7 +47,7 @@ alias oc='omniroute'
 alias ccli='cloudcli'
 alias pocket='ccpocket-bridge'
 alias cr='CLAUDE_CODE_ENTRYPOINT=sdk-cli claude -r'
-alias fcc='bash -c "source ~/.freecloudcode/../lib/utils.sh 2>/dev/null; source ~/.freecloudcode/../lib/status.sh 2>/dev/null; show_status"'
+alias fcc='bash -c "source ~/freecloudcode/lib/utils.sh; source ~/freecloudcode/lib/status.sh; show_status"'
 
 # ===== 服务管理 =====
 scc() { tmux_start cloudcli cloudcli ~/.freecloudcode/logs/cloudcli.log && echo "✓ CloudCLI 已启动"; }

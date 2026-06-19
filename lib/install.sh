@@ -86,6 +86,7 @@ install_npm_packages() {
         "@ccpocket/bridge"
         "@tawandotorg/claude-sync"
     )
+    local failed=0
 
     for pkg in "${packages[@]}"; do
         if npm list -g "$pkg" &>/dev/null; then
@@ -94,25 +95,11 @@ install_npm_packages() {
             log_success "$pkg 已安装"
         else
             log_warn "$pkg 安装失败"
-            return 1
+            failed=1
         fi
     done
 
-    return 0
-}
-
-# 配置 .bashrc
-configure_bashrc() {
-    local bashrc="$HOME/.bashrc"
-    local marker="# >>> FreeCloudCode >>>"
-
-    # 清理旧配置块
-    if grep -q "$marker" "$bashrc" 2>/dev/null; then
-        sed -i "/# >>> FreeCloudCode >>>/,/# <<< FreeCloudCode <<</d" "$bashrc"
-    fi
-
-    # 写入新配置块（在 setup.sh 中会完整写入）
-    log_success ".bashrc 已配置"
+    return $failed
 }
 
 # 创建目录结构

@@ -65,7 +65,11 @@ echo "========================================="
 echo " 📋 安装检查"
 echo "========================================="
 for cmd in tailscale claude omniroute cloudcli codex ccpocket-bridge claude-sync; do
-    display_status_line "$([ $(check_command "$cmd" && echo ok || echo fail) = ok ] && echo ok || echo fail)" "$cmd" "$([ $(check_command "$cmd" && echo ok || echo fail) = ok ] && echo "✓" || echo "未找到")"
+    if check_command "$cmd"; then
+        display_status_line "ok" "$cmd" "✓"
+    else
+        display_status_line "fail" "$cmd" "未找到"
+    fi
 done
 
 echo ""
