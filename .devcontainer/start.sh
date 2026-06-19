@@ -8,6 +8,8 @@ LOG_DIR="$HOME/.freecloudcode/logs"
 STATUS_DIR="$HOME/.freecloudcode"
 STATUS_FILE="$STATUS_DIR/startup-status.log"
 mkdir -p "$LOG_DIR" "$STATUS_DIR"
+# 清除旧完成标记，.bashrc 会等新标记写入
+rm -f "$STATUS_DIR/startup-done"
 
 # 确保 npm 全局命令在 PATH 中
 export PATH="$PATH:$HOME/.local/bin:$(npm config get prefix 2>/dev/null)/bin"
@@ -46,9 +48,12 @@ if command -v tailscale &>/dev/null; then
     fi
 
     if pgrep -x tailscaled >/dev/null 2>&1; then
-        # 检查是否已认证连接
+        # 检查是否已认证连接：优先用 status，失败则用网络接口 fallback
         if sudo tailscale status >/dev/null 2>&1; then
             record "Tailscale" "ok" "" "已连接"
+        elif ip link show tailscale0 >/dev/null 2>&1; then
+            # tailscale0 接口存在说明已连接，status 命令在非交互式环境下可能失败
+            record "Tailscale" "ok" "" "已连接（通过网络接口检测）"
         else
             # 非交互式环境，只能用 authkey 认证
             if [ -n "$TAILSCALEAUTHKEY" ]; then
@@ -72,14 +77,23 @@ fi
 
 # ===== 2. OmniRoute =====
 if command -v omniroute &>/dev/null; then
-    _or_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 1 --max-time 2 "http://localhost:20128" 2>/dev/null)
-    if [[ "$_or_code" =~ ^[23] ]]; then
+    # 检测函数：多次重试，等待服务完全就绪
+    _or_check() {
+        local code
+        for _i in 1 2 3; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 2 --max-time 3 "http://localhost:20128" 2>/dev/null)
+            [[ "$code" =~ ^[23] ]] && return 0
+            sleep 2
+        done
+        return 1
+    }
+
+    if _or_check; then
         record "OmniRoute" "ok" "" "http://localhost:20128"
     else
         omniroute serve --daemon > "$LOG_DIR/omniroute.log" 2>&1
-        sleep 3
-        _or_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 2 --max-time 3 "http://localhost:20128" 2>/dev/null)
-        if [[ "$_or_code" =~ ^[23] ]]; then
+        sleep 8  # 等待 daemon 完全启动（daemon 写日志 + 绑定端口需要时间）
+        if _or_check; then
             record "OmniRoute" "ok" "" "http://localhost:20128"
         else
             record "OmniRoute" "fail" "$LOG_DIR/omniroute.log" "启动失败"
@@ -158,3 +172,6 @@ _tmux_run cloudcli "cloudcli" "cloudcli" "CloudCLI" 3001
 
 # 同时输出到 stderr（devcontainer 日志可查）
 cat "$STATUS_FILE" >&2
+
+# 写入完成标记（供 .bashrc 等待）
+touch "$STATUS_DIR/startup-done"

@@ -172,7 +172,7 @@ _fcc_check_services() {
     # Tailscale
     if command -v tailscale &>/dev/null; then
         if pgrep -x tailscaled >/dev/null 2>&1; then
-            if sudo tailscale status >/dev/null 2>&1; then
+            if sudo tailscale status >/dev/null 2>&1 || ip link show tailscale0 >/dev/null 2>&1; then
                 echo "  ✅ Tailscale — ${ts_ip:-已连接}"
             else
                 echo "  ⚠️  Tailscale — 守护进程运行但未认证"
@@ -181,25 +181,31 @@ _fcc_check_services() {
             echo "  ❌ Tailscale — 未运行"
         fi
     fi
-    # OmniRoute（HTTP 检测）
+    # OmniRoute（HTTP 检测，带重试）
     if command -v omniroute &>/dev/null; then
         local or_addr="${ts_ip:-localhost}"
-        local or_code
-        or_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 2 --max-time 3 "http://${or_addr}:20128" 2>/dev/null)
+        local or_code=""
+        for _or_try in 1 2 3; do
+            or_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 2 --max-time 3 "http://${or_addr}:20128" 2>/dev/null)
+            [[ "$or_code" =~ ^[23] ]] && break
+            sleep 2
+        done
         if [[ "$or_code" =~ ^[23] ]]; then
             echo "  ✅ OmniRoute — http://${or_addr}:20128"
         else
             echo "  ❌ OmniRoute — 未运行 (http://${or_addr}:20128)"
         fi
     fi
-    # CloudCLI（HTTP 检测）
+    # CloudCLI（HTTP 检测，fallback tmux session）
     local cc_addr="${ts_ip:-localhost}"
     local cc_code
     cc_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 2 --max-time 3 "http://${cc_addr}:3001" 2>/dev/null)
     if [[ "$cc_code" =~ ^[23] ]]; then
         echo "  ✅ CloudCLI — http://${cc_addr}:3001"
+    elif tmux has-session -t cloudcli 2>/dev/null || pgrep -f cloudcli >/dev/null 2>&1; then
+        echo "  ✅ CloudCLI — http://${cc_addr}:3001"
     else
-        echo "  ❌ CloudCLI — 未运行 (http://${cc_addr}:3001)"
+        echo "  ❌ CloudCLI — 未运行"
     fi
 }
 
@@ -213,6 +219,15 @@ fi
 # 交互式终端才显示状态和命令速查
 if [[ $- == *i* ]]; then
     echo ""
+    # 等待 start.sh 完成（最多 30 秒），避免服务还没启动就检测
+    _FCC_DONE="$HOME/.freecloudcode/startup-done"
+    if [ ! -f "$_FCC_DONE" ] && pgrep -f "start.sh" >/dev/null 2>&1; then
+        echo "⏳ 等待服务启动..."
+        for _w in $(seq 1 30); do
+            [ -f "$_FCC_DONE" ] && break
+            sleep 1
+        done
+    fi
     # 显示上次启动状态（如果有）
     _STATUS_FILE="$HOME/.freecloudcode/startup-status.log"
     if [ -f "$_STATUS_FILE" ]; then
