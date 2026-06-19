@@ -140,8 +140,10 @@ create_directories() {
 # 主安装流程
 run_setup() {
     local failed=()
+    local log_file="$LOG_DIR/setup.log"
+    ensure_dir "$LOG_DIR"
 
-    # 将所有函数的 stdout 重定向到 stderr，避免 curl|sh 等命令的输出污染返回值
+    # 所有安装输出写入日志文件，终端只显示关键结果
     {
         install_system_deps || failed+=("系统依赖")
         install_tailscale || failed+=("Tailscale")
@@ -153,7 +155,7 @@ run_setup() {
 
         # 配置 Claude Code hooks
         configure_claude_code_hooks
-    } 1>&2
+    } > "$log_file" 2>&1
 
     # 返回失败数量（只有这一行输出到 stdout）
     echo "${#failed[@]}"

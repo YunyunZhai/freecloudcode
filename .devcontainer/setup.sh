@@ -76,5 +76,5 @@ echo ""
 if [ "$FAILED_COUNT" -eq 0 ]; then
     echo "✅ 所有工具安装成功！"
 else
-    echo "⚠️  有 $FAILED_COUNT 个工具安装失败，请查看上方日志"
+    echo "⚠️  有 $FAILED_COUNT 个工具安装失败，日志: ~/.freecloudcode/logs/setup.log"
 fi
