@@ -43,6 +43,9 @@ auth_tailscale() {
         return 1
     fi
 
+    # 确保 tailscaled 守护进程已启动
+    tailscale_ensure_daemon
+
     # 已认证
     if sudo tailscale status >/dev/null 2>&1; then
         log_success "Tailscale 已认证连接"
