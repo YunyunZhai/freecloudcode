@@ -50,8 +50,18 @@ if command -v tailscale &>/dev/null; then
         if sudo tailscale status >/dev/null 2>&1; then
             record "Tailscale" "ok" "" "已连接"
         else
-            record "Tailscale" "fail" "$LOG_DIR/tailscale.log" \
-                "守护进程运行中但未认证，需要运行: sudo tailscale up --ssh"
+            # 非交互式环境，只能用 authkey 认证
+            if [ -n "$TAILSCALEAUTHKEY" ]; then
+                if sudo tailscale up --ssh --authkey="$TAILSCALEAUTHKEY" 2>/dev/null; then
+                    record "Tailscale" "ok" "" "已通过 authkey 认证"
+                else
+                    record "Tailscale" "fail" "$LOG_DIR/tailscale.log" \
+                        "authkey 认证失败，检查 TAILSCALEAUTHKEY 是否有效"
+                fi
+            else
+                record "Tailscale" "skip" "" \
+                    "未认证，需设置 TAILSCALEAUTHKEY 或手动运行: sudo tailscale up --ssh"
+            fi
         fi
     else
         record "Tailscale" "fail" "$LOG_DIR/tailscale.log" "tailscaled 启动失败"
@@ -62,12 +72,14 @@ fi
 
 # ===== 2. OmniRoute =====
 if command -v omniroute &>/dev/null; then
-    if curl -s -o /dev/null -w "" --connect-timeout 1 --max-time 2 "http://localhost:20128" 2>/dev/null; then
+    _or_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 1 --max-time 2 "http://localhost:20128" 2>/dev/null)
+    if [[ "$_or_code" =~ ^[23] ]]; then
         record "OmniRoute" "ok" "" "http://localhost:20128"
     else
         omniroute serve --daemon > "$LOG_DIR/omniroute.log" 2>&1
         sleep 3
-        if curl -s -o /dev/null -w "" --connect-timeout 2 --max-time 3 "http://localhost:20128" 2>/dev/null; then
+        _or_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 2 --max-time 3 "http://localhost:20128" 2>/dev/null)
+        if [[ "$_or_code" =~ ^[23] ]]; then
             record "OmniRoute" "ok" "" "http://localhost:20128"
         else
             record "OmniRoute" "fail" "$LOG_DIR/omniroute.log" "启动失败"

@@ -10,6 +10,13 @@ if [ -f "$SETUP_MARKER" ]; then
     exit 0
 fi
 
+# 确保目录存在（日志要写文件）
+mkdir -p "$HOME/.freecloudcode/logs"
+
+# 日志同时输出到终端和文件
+SETUP_LOG="$HOME/.freecloudcode/logs/setup.log"
+exec > >(tee "$SETUP_LOG") 2>&1
+
 FAILED=()  # 记录安装失败的项目
 
 echo "========================================="
@@ -36,6 +43,33 @@ if ! command -v tailscale &>/dev/null; then
     fi
 else
     echo "✓ Tailscale 已存在 ($(tailscale version | head -1))"
+fi
+
+# 启动 tailscaled 并认证
+if command -v tailscale &>/dev/null; then
+    # 确保 tailscaled 守护进程运行
+    if ! pgrep -x tailscaled >/dev/null 2>&1; then
+        nohup sudo tailscaled </dev/null > /tmp/tailscaled-setup.log 2>&1 &
+        disown
+        sleep 3
+    fi
+
+    # 检查是否已认证（非交互式脚本，只能用 authkey 认证）
+    if sudo tailscale status >/dev/null 2>&1; then
+        echo "✓ Tailscale 已认证连接"
+    elif [ -n "$TAILSCALEAUTHKEY" ]; then
+        echo "⟳ 使用 TAILSCALEAUTHKEY 认证..."
+        if sudo tailscale up --ssh --authkey="$TAILSCALEAUTHKEY" 2>/dev/null; then
+            echo "✓ Tailscale 认证成功"
+        else
+            echo "⚠ Tailscale authkey 认证失败"
+            FAILED+=("Tailscale 认证: 检查 TAILSCALEAUTHKEY 是否有效")
+        fi
+    else
+        echo "⚠ Tailscale 未认证（非交互式环境无法浏览器认证）"
+        echo "  → 设置环境变量 TAILSCALEAUTHKEY 后重新创建容器"
+        echo "  → 或在终端手动运行: sudo tailscale up --ssh"
+    fi
 fi
 
 # ===== 3. Claude Code =====
@@ -152,7 +186,7 @@ _fcc_check_services() {
         local or_addr="${ts_ip:-localhost}"
         local or_code
         or_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 2 --max-time 3 "http://${or_addr}:20128" 2>/dev/null)
-        if [[ "$or_code" =~ ^(200|301|302|304)$ ]]; then
+        if [[ "$or_code" =~ ^[23] ]]; then
             echo "  ✅ OmniRoute — http://${or_addr}:20128"
         else
             echo "  ❌ OmniRoute — 未运行 (http://${or_addr}:20128)"
@@ -162,23 +196,44 @@ _fcc_check_services() {
     local cc_addr="${ts_ip:-localhost}"
     local cc_code
     cc_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 2 --max-time 3 "http://${cc_addr}:3001" 2>/dev/null)
-    if [[ "$cc_code" =~ ^(200|301|302|304)$ ]]; then
+    if [[ "$cc_code" =~ ^[23] ]]; then
         echo "  ✅ CloudCLI — http://${cc_addr}:3001"
     else
         echo "  ❌ CloudCLI — 未运行 (http://${cc_addr}:3001)"
     fi
 }
 
-# claude-sync 自动同步
+# claude-sync 自动同步（未配置则跳过）
 if command -v claude-sync &>/dev/null; then
-    (claude-sync pull -q && claude-sync push -q) &>/dev/null &
+    if claude-sync status -q 2>/dev/null; then
+        (claude-sync pull -q && claude-sync push -q) &>/dev/null &
+    fi
 fi
 
 # 交互式终端才显示状态和命令速查
 if [[ $- == *i* ]]; then
     echo ""
+    # 显示上次启动状态（如果有）
+    _STATUS_FILE="$HOME/.freecloudcode/startup-status.log"
+    if [ -f "$_STATUS_FILE" ]; then
+        cat "$_STATUS_FILE"
+        echo ""
+    fi
+    # 实时探测服务状态
     _fcc_check_services
     echo ""
+    # 显示待配置项（仅影响功能的服务）
+    _NEEDS_CONFIG=()
+    if command -v claude-sync &>/dev/null && ! claude-sync status -q 2>/dev/null; then
+        _NEEDS_CONFIG+=("claude-sync 未配置 → claude-sync init")
+    fi
+    if [ ${#_NEEDS_CONFIG[@]} -gt 0 ]; then
+        echo "⚠️  待配置:"
+        for item in "${_NEEDS_CONFIG[@]}"; do
+            echo "   $item"
+        done
+        echo ""
+    fi
     echo "📌 命令: cc(claude) codex oc(omniroute) ccli(cloudcli) pocket(bridge) cr(重连)"
     echo "   服务: scc/xcc(CloudCLI) sbp/xbp(Bridge) xor(OmniRoute)"
     echo ""
@@ -219,19 +274,22 @@ fi
 CLAUDE_SETTINGS="$HOME/.claude/settings.json"
 mkdir -p "$HOME/.claude"
 
+# Stop hook: 先检测 claude-sync 是否已配置，未配置则跳过
+FCC_SYNC_CMD='if claude-sync status -q 2>/dev/null; then claude-sync pull -q && claude-sync push -q; fi'
+
 # 合并 Stop hook（保留已有配置）
 if [ -f "$CLAUDE_SETTINGS" ]; then
     # 已有配置，检查是否已有 Stop hook
     if ! jq -e '.hooks.Stop' "$CLAUDE_SETTINGS" >/dev/null 2>&1; then
         # 没有 Stop hook，追加
-        jq '.hooks += {"Stop": [{"hooks": [{"type": "command", "command": "claude-sync pull -q && claude-sync push -q", "timeout": 30, "statusMessage": "claude-sync 同步中..."}]}]}' "$CLAUDE_SETTINGS" > "${CLAUDE_SETTINGS}.tmp" && mv "${CLAUDE_SETTINGS}.tmp" "$CLAUDE_SETTINGS"
+        jq --arg cmd "$FCC_SYNC_CMD" '.hooks += {"Stop": [{"hooks": [{"type": "command", "command": $cmd, "timeout": 30, "statusMessage": "claude-sync 同步中..."}]}]}' "$CLAUDE_SETTINGS" > "${CLAUDE_SETTINGS}.tmp" && mv "${CLAUDE_SETTINGS}.tmp" "$CLAUDE_SETTINGS"
         echo "✅ Claude Code Stop hook 已配置"
     else
         echo "✅ Claude Code Stop hook 已存在"
     fi
 else
     # 不存在，创建
-    cat > "$CLAUDE_SETTINGS" << 'SETTINGS_EOF'
+    cat > "$CLAUDE_SETTINGS" << SETTINGS_EOF
 {
   "hooks": {
     "Stop": [
@@ -239,7 +297,7 @@ else
         "hooks": [
           {
             "type": "command",
-            "command": "claude-sync pull -q && claude-sync push -q",
+            "command": "$FCC_SYNC_CMD",
             "timeout": 30,
             "statusMessage": "claude-sync 同步中..."
           }
@@ -252,7 +310,49 @@ SETTINGS_EOF
     echo "✅ Claude Code Stop hook 已配置"
 fi
 
-# ===== 6. 安装检查 =====
+# ===== 6. 配置提醒 =====
+echo ""
+echo "========================================="
+echo " 🔧 配置提醒"
+echo "========================================="
+
+# Tailscale 认证状态
+if command -v tailscale &>/dev/null; then
+    if sudo tailscale status >/dev/null 2>&1; then
+        echo "  ✅ Tailscale — 已认证"
+    else
+        echo "  ⚠️  Tailscale — 需要认证"
+        echo "     方式1: 设置环境变量 TAILSCALEAUTHKEY 后重新创建容器"
+        echo "     方式2: 在终端运行: sudo tailscale up --ssh"
+    fi
+else
+    echo "  ⏭  Tailscale — 未安装"
+fi
+
+# OmniRoute 配置
+if command -v omniroute &>/dev/null; then
+    if [ -f "$HOME/.omniroute/config.yaml" ] || [ -f "$HOME/.omniroute/config.json" ]; then
+        echo "  ✅ OmniRoute — 已配置"
+    else
+        echo "  ⚠️  OmniRoute — 未配置（首次使用需运行: oc）"
+    fi
+else
+    echo "  ⏭  OmniRoute — 未安装"
+fi
+
+# claude-sync 配置
+if command -v claude-sync &>/dev/null; then
+    if [ -f "$HOME/.claude-sync/config.json" ] || [ -d "$HOME/.claude-sync" ] && ls "$HOME/.claude-sync/"*.json >/dev/null 2>&1; then
+        echo "  ✅ claude-sync — 已配置"
+    else
+        echo "  ⚠️  claude-sync — 未配置"
+        echo "     首次使用需运行: claude-sync init"
+    fi
+else
+    echo "  ⏭  claude-sync — 未安装"
+fi
+
+# ===== 7. 安装检查 =====
 echo ""
 echo "========================================="
 echo " 📋 安装检查"
