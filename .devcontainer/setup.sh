@@ -86,6 +86,10 @@ fi
 cat >> "$BASHRC" << 'BASHRC_BLOCK'
 
 # >>> FreeCloudCode >>>
+# 防止重复加载（login shell 可能同时有 .profile 和 .bashrc 都 source）
+if [ -z "$_FCC_LOADED" ]; then
+export _FCC_LOADED=1
+
 alias cc='claude'
 alias codex='codex'
 alias oc='omniroute'
@@ -98,6 +102,28 @@ scc()  { tmux new-session -d -s cloudcli "cloudcli 2>&1 | tee /tmp/cloudcli.log;
 xcc()  { tmux kill-session -t cloudcli 2>/dev/null; pkill -f cloudcli 2>/dev/null; echo "✓ CloudCLI 已停止"; }
 sbp()  { tmux new-session -d -s bridge "ccpocket-bridge 2>&1 | tee /tmp/bridge.log; sleep infinity" && echo "✓ Bridge 已启动"; }
 xbp()  { tmux kill-session -t bridge 2>/dev/null; pkill -f "ccpocket-bridge" 2>/dev/null; echo "✓ Bridge 已停止"; }
+xor()  {
+    # 优先尝试 omniroute 自带的停止命令
+    if omniroute stop 2>/dev/null; then
+        echo "✓ OmniRoute 已停止"
+        return
+    fi
+    # 尝试读取 PID 文件精确杀死 daemon
+    local pidfile="$HOME/.omniroute/omniroute.pid"
+    if [ -f "$pidfile" ] && kill "$(cat "$pidfile")" 2>/dev/null; then
+        echo "✓ OmniRoute 已停止 (PID: $(cat "$pidfile"))"
+        rm -f "$pidfile"
+        return
+    fi
+    # 兜底：精确匹配 daemon 进程（不误杀交互式 omniroute）
+    local pid
+    pid=$(pgrep -f "omniroute.*serve.*--daemon" 2>/dev/null | head -1)
+    if [ -n "$pid" ] && kill "$pid" 2>/dev/null; then
+        echo "✓ OmniRoute 已停止 (PID: $pid)"
+    else
+        echo "⚠ OmniRoute 未运行或停止失败"
+    fi
+}
 
 # claude-sync 自动同步
 if command -v claude-sync &>/dev/null; then
@@ -109,9 +135,12 @@ echo "🌊 FreeCloudCode 命令速查:"
 echo "  cc    — Claude Code        codex — OpenAI Codex"
 echo "  oc    — OmniRoute          ccli  — CloudCLI"
 echo "  pocket — CCPocket Bridge   cr    — 重连 Claude 会话"
-echo "  scc   — 启动 CloudCLI      xcc   — 停止"
-echo "  sbp   — 启动 Bridge        xbp   — 停止"
+echo "  scc/xcc — 启动/停止 CloudCLI"
+echo "  sbp/xbp — 启动/停止 Bridge"
+echo "  xor     — 停止 OmniRoute"
 echo ""
+
+fi  # _FCC_LOADED guard
 # <<< FreeCloudCode <<<
 BASHRC_BLOCK
 echo "✅ .bashrc 已配置"
@@ -127,26 +156,10 @@ fi
 cat >> "$PROFILE" << 'PROFILE_BLOCK'
 
 # >>> FreeCloudCode >>>
-alias cc='claude'
-alias codex='codex'
-alias oc='omniroute'
-alias ccli='cloudcli'
-alias pocket='ccpocket-bridge'
-alias cr='CLAUDE_CODE_ENTRYPOINT=sdk-cli claude -r'
-
-# claude-sync 自动同步
-if command -v claude-sync &>/dev/null; then
-    (claude-sync pull -q && claude-sync push -q) &>/dev/null &
+# Login shell 需要手动 source .bashrc（别名和服务管理函数在 .bashrc 中定义）
+if [ -f "$HOME/.bashrc" ]; then
+    . "$HOME/.bashrc"
 fi
-
-echo ""
-echo "🌊 FreeCloudCode 命令速查:"
-echo "  cc    — Claude Code        codex — OpenAI Codex"
-echo "  oc    — OmniRoute          ccli  — CloudCLI"
-echo "  pocket — CCPocket Bridge   cr    — 重连 Claude 会话"
-echo "  scc   — 启动 CloudCLI      xcc   — 停止"
-echo "  sbp   — 启动 Bridge        xbp   — 停止"
-echo ""
 # <<< FreeCloudCode <<<
 PROFILE_BLOCK
 echo "✅ .profile 已配置（login shell 生效）"
