@@ -17,7 +17,7 @@ ensure_dir()    { mkdir -p "$1"; }
 # ===== HTTP 检查 =====
 # http_check URL [timeout] — 单次 HTTP 检查
 http_check() {
-    local url="$1" timeout="${2:-2}"
+    local url="$1" timeout="${2:-1}"
     local code
     code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout "$timeout" --max-time "$timeout" "$url" 2>/dev/null)
     [[ "$code" =~ ^[23] ]]
@@ -25,7 +25,7 @@ http_check() {
 
 # http_check_retry URL [attempts] [interval] [timeout] — 带重试的 HTTP 检查
 http_check_retry() {
-    local url="$1" attempts="${2:-3}" interval="${3:-2}" timeout="${4:-2}"
+    local url="$1" attempts="${2:-2}" interval="${3:-1}" timeout="${4:-1}"
     local i code
     for i in $(seq 1 "$attempts"); do
         code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout "$timeout" --max-time "$timeout" "$url" 2>/dev/null)
