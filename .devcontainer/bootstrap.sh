@@ -55,10 +55,10 @@ xcc() { tmux_stop cloudcli cloudcli; echo "✓ CloudCLI 已停止"; }
 sbp() { tmux_start bridge ccpocket-bridge ~/.freecloudcode/logs/bridge.log && echo "✓ Bridge 已启动"; }
 xbp() { tmux_stop bridge ccpocket-bridge; echo "✓ Bridge 已停止"; }
 son() {
-    if curl -s -o /dev/null -w "%{http_code}" http://localhost:20128 2>/dev/null | grep -q "^[23]"; then echo "⚠ OmniRoute 已在运行"; return; fi
+    if omniroute doctor --no-liveness >/dev/null 2>&1; then echo "⚠ OmniRoute 已在运行"; return; fi
     omniroute serve --daemon > ~/.freecloudcode/logs/omniroute.log 2>&1
     sleep 3
-    if curl -s -o /dev/null -w "%{http_code}" http://localhost:20128 2>/dev/null | grep -q "^[23]"; then echo "✓ OmniRoute 已启动"; else echo "⚠ OmniRoute 启动失败，日志: ~/.freecloudcode/logs/omniroute.log"; fi
+    if omniroute doctor --no-liveness >/dev/null 2>&1; then echo "✓ OmniRoute 已启动"; else echo "⚠ OmniRoute 启动失败，日志: ~/.freecloudcode/logs/omniroute.log"; fi
 }
 xor() {
     if omniroute stop 2>/dev/null; then echo "✓ OmniRoute 已停止"; return; fi
