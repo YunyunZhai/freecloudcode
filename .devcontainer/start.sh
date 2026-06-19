@@ -40,6 +40,9 @@ if [ ! -f "$CONFIG_HINT_SHOWN" ]; then
     if [ "$status" = "skip" ]; then
         echo "     方式1（推荐）: 创建容器时设置环境变量 TAILSCALEAUTHKEY" >&2
         echo "     方式2: 终端运行: sudo tailscale up --ssh" >&2
+        echo "     认证后可从其他设备通过 Tailscale IP 访问服务" >&2
+    elif [ "$status" = "ok" ] && [ -n "$ts_ip" ]; then
+        echo "     访问地址: http://${ts_ip}:20128 (OmniRoute) http://${ts_ip}:3001 (CloudCLI)" >&2
     fi
 
     # OmniRoute
@@ -48,6 +51,8 @@ if [ ! -f "$CONFIG_HINT_SHOWN" ]; then
     if [ "$status" = "skip" ]; then
         display_status_line "skip" "OmniRoute" "未配置"
         echo "     运行: oc（首次使用需配置 API key）" >&2
+        echo "     迁移旧数据: scp storage.sqlite codespace@<tailscale-ip>:~/.omniroute/" >&2
+        echo "                  scp .env codespace@<tailscale-ip>:~/.omniroute/" >&2
     elif [ "$status" = "fail" ]; then
         display_status_line "fail" "OmniRoute" "$hint"
         echo "     运行: oc（配置 API key）" >&2
