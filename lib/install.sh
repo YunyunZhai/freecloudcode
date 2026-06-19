@@ -89,7 +89,9 @@ install_npm_packages() {
     local failed=0
 
     for pkg in "${packages[@]}"; do
-        if npm list -g "$pkg" &>/dev/null; then
+        # 取包名最后一段作为命令名（如 @openai/codex → codex）
+        local bin_name="${pkg##*/}"
+        if check_command "$bin_name" 2>/dev/null; then
             log_success "$pkg 已存在"
         elif npm install -g "$pkg" 2>&1 | tail -1 >/dev/null; then
             log_success "$pkg 已安装"
@@ -120,17 +122,20 @@ create_directories() {
 run_setup() {
     local failed=()
 
-    install_system_deps || failed+=("系统依赖")
-    install_tailscale || failed+=("Tailscale")
-    auth_tailscale || failed+=("Tailscale 认证")
-    install_claude || failed+=("Claude Code")
-    install_npm_packages || failed+=("npm 包")
-    create_directories
+    # 将所有函数的 stdout 重定向到 stderr，避免 curl|sh 等命令的输出污染返回值
+    {
+        install_system_deps || failed+=("系统依赖")
+        install_tailscale || failed+=("Tailscale")
+        auth_tailscale || failed+=("Tailscale 认证")
+        install_claude || failed+=("Claude Code")
+        install_npm_packages || failed+=("npm 包")
+        create_directories
 
-    # 配置 Claude Code hooks
-    configure_claude_code_hooks
+        # 配置 Claude Code hooks
+        configure_claude_code_hooks
+    } 1>&2
 
-    # 返回失败数量
+    # 返回失败数量（只有这一行输出到 stdout）
     echo "${#failed[@]}"
 }
 

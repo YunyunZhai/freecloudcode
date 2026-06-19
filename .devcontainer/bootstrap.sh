@@ -11,8 +11,8 @@ if grep -q "$MARKER" "$BASHRC" 2>/dev/null; then
     exit 0
 fi
 
-# ===== 创建 ~/freecloudcode → /workspace/freecloudcode 符号链接 =====
-WORKSPACE="/workspace/freecloudcode"
+# ===== 创建 ~/freecloudcode → /workspaces/freecloudcode 符号链接 =====
+WORKSPACE="/workspaces/freecloudcode"
 LINK="$HOME/freecloudcode"
 if [ -d "$WORKSPACE" ] && [ ! -e "$LINK" ]; then
     ln -s "$WORKSPACE" "$LINK"
@@ -22,12 +22,9 @@ fi
 cat >> "$BASHRC" << 'BASHRC_BLOCK'
 
 # >>> FreeCloudCode >>>
-if [ -z "$_FCC_LOADED" ]; then
-export _FCC_LOADED=1
-
 _FCC_HOME="${FCC_HOME:-$HOME/freecloudcode}"
 
-# 首次安装（仅当 marker 不存在时）
+# 首次安装（仅当 marker 不存在时）— 每次都检查，但幂等执行
 if [ ! -f "$HOME/.freecloudcode.setup.done" ]; then
     if [ -f "$_FCC_HOME/.devcontainer/setup.sh" ]; then
         echo "🚀 FreeCloudCode 首次安装..."
@@ -35,9 +32,12 @@ if [ ! -f "$HOME/.freecloudcode.setup.done" ]; then
     fi
 fi
 
-# 启动服务（每次打开终端）
-if [ -f "$_FCC_HOME/.devcontainer/start.sh" ]; then
-    bash "$_FCC_HOME/.devcontainer/start.sh"
+# 启动服务（每次打开终端只执行一次）
+if [ -z "$_FCC_STARTUP_DONE" ]; then
+    export _FCC_STARTUP_DONE=1
+    if [ -f "$_FCC_HOME/.devcontainer/start.sh" ]; then
+        bash "$_FCC_HOME/.devcontainer/start.sh"
+    fi
 fi
 
 # ===== 别名 =====
@@ -69,7 +69,6 @@ if [[ $- == *i* ]]; then
     echo "   scc/xcc(CloudCLI) sbp/xbp(Bridge) xor(OmniRoute)"
 fi
 
-fi  # _FCC_LOADED guard
 # <<< FreeCloudCode <<<
 BASHRC_BLOCK
 
