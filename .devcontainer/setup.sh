@@ -98,9 +98,9 @@ alias pocket='ccpocket-bridge'
 alias cr='CLAUDE_CODE_ENTRYPOINT=sdk-cli claude -r'
 
 # 服务管理函数（写入 bashrc，每个终端可用）
-scc()  { tmux new-session -d -s cloudcli "cloudcli 2>&1 | tee /tmp/cloudcli.log; sleep infinity" && echo "✓ CloudCLI 已启动"; }
+scc()  { tmux new-session -d -s cloudcli "cloudcli 2>&1 | tee ~/.freecloudcode/logs/cloudcli.log; sleep infinity" && echo "✓ CloudCLI 已启动"; }
 xcc()  { tmux kill-session -t cloudcli 2>/dev/null; pkill -f cloudcli 2>/dev/null; echo "✓ CloudCLI 已停止"; }
-sbp()  { tmux new-session -d -s bridge "ccpocket-bridge 2>&1 | tee /tmp/bridge.log; sleep infinity" && echo "✓ Bridge 已启动"; }
+sbp()  { tmux new-session -d -s bridge "ccpocket-bridge 2>&1 | tee ~/.freecloudcode/logs/bridge.log; sleep infinity" && echo "✓ Bridge 已启动"; }
 xbp()  { tmux kill-session -t bridge 2>/dev/null; pkill -f "ccpocket-bridge" 2>/dev/null; echo "✓ Bridge 已停止"; }
 xor()  {
     # 优先尝试 omniroute 自带的停止命令
@@ -301,6 +301,18 @@ else
         echo "  $item"
     done
 fi
+
+# 创建 .freecloudcode 目录结构
+mkdir -p ~/.freecloudcode/{logs,config}
+chmod 755 ~/.freecloudcode
+chmod 755 ~/.freecloudcode/logs
+chmod 755 ~/.freecloudcode/config
+
+# 初始化日志文件
+for logfile in claude_sync tailscale omniroute cloudcli bridge; do
+    touch ~/.freecloudcode/logs/"${logfile}.log"
+    chmod 644 ~/.freecloudcode/logs/"${logfile}.log"
+done
 
 # 写入完成标记，确保下次不重复执行
 touch "$SETUP_MARKER"

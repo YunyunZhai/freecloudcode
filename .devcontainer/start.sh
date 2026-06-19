@@ -4,9 +4,10 @@
 # 设计原则：不能阻塞启动流程，所有服务快速后台启动
 # 状态报告写入文件，由 ~/.bashrc 在每次登录时显示
 
+LOG_DIR="$HOME/.freecloudcode/logs"
 STATUS_DIR="$HOME/.freecloudcode"
 STATUS_FILE="$STATUS_DIR/startup-status.log"
-mkdir -p "$STATUS_DIR"
+mkdir -p "$LOG_DIR" "$STATUS_DIR"
 
 # 确保 npm 全局命令在 PATH 中
 export PATH="$PATH:$HOME/.local/bin:$(npm config get prefix 2>/dev/null)/bin"
@@ -39,7 +40,7 @@ record() { SvcName+=("$1"); SvcStatus+=("$2"); SvcLog+=("${3:-}"); SvcHint+=("${
 if command -v tailscale &>/dev/null; then
     # 先确保 tailscaled 守护进程运行
     if ! pgrep -x tailscaled >/dev/null 2>&1; then
-        nohup sudo tailscaled </dev/null >/tmp/tailscaled.log 2>&1 &
+        nohup sudo tailscaled </dev/null > "$LOG_DIR/tailscale.log" 2>&1 &
         disown
         sleep 2
     fi
@@ -49,11 +50,11 @@ if command -v tailscale &>/dev/null; then
         if sudo tailscale status >/dev/null 2>&1; then
             record "Tailscale" "ok" "" "已连接"
         else
-            record "Tailscale" "fail" "/tmp/tailscaled.log" \
+            record "Tailscale" "fail" "$LOG_DIR/tailscale.log" \
                 "守护进程运行中但未认证，需要运行: sudo tailscale up --ssh"
         fi
     else
-        record "Tailscale" "fail" "/tmp/tailscaled.log" "tailscaled 启动失败"
+        record "Tailscale" "fail" "$LOG_DIR/tailscale.log" "tailscaled 启动失败"
     fi
 else
     record "Tailscale" "skip" "" "未安装"
@@ -61,15 +62,15 @@ fi
 
 # ===== 2. OmniRoute =====
 if command -v omniroute &>/dev/null; then
-    if pgrep -f "omniroute" >/dev/null 2>&1; then
+    if curl -s -o /dev/null -w "" --connect-timeout 1 --max-time 2 "http://localhost:20128" 2>/dev/null; then
         record "OmniRoute" "ok" "" "http://localhost:20128"
     else
-        omniroute serve --daemon >/tmp/omniroute.log 2>&1
-        sleep 2
-        if pgrep -f "omniroute" >/dev/null 2>&1; then
+        omniroute serve --daemon > "$LOG_DIR/omniroute.log" 2>&1
+        sleep 3
+        if curl -s -o /dev/null -w "" --connect-timeout 2 --max-time 3 "http://localhost:20128" 2>/dev/null; then
             record "OmniRoute" "ok" "" "http://localhost:20128"
         else
-            record "OmniRoute" "fail" "/tmp/omniroute.log" "启动失败"
+            record "OmniRoute" "fail" "$LOG_DIR/omniroute.log" "启动失败"
         fi
     fi
 else
@@ -94,12 +95,12 @@ _tmux_run() {
         record "$label" "fail" "" "端口 ${port} 已被占用"
     else
         tmux new-session -d -s "$name" \
-            "bash -c '$cmd 2>&1 | tee /tmp/${name}.log; sleep infinity'"
+            "bash -c '$cmd 2>&1 | tee \"$LOG_DIR/${name}.log\"; sleep infinity'"
         sleep 2
         if pgrep -f "$proc" >/dev/null 2>&1; then
             record "$label" "ok" "" "已启动"
         else
-            record "$label" "fail" "/tmp/${name}.log" "启动失败"
+            record "$label" "fail" "$LOG_DIR/${name}.log" "启动失败"
         fi
     fi
 }
