@@ -36,37 +36,37 @@ if [ ! -f "$CONFIG_HINT_SHOWN" ]; then
     # Tailscale
     result=$(query_tailscale)
     IFS='|' read -r status _ hint <<< "$result"
-    display_status_line "$status" "Tailscale" "$hint"
-    if [ "$status" = "skip" ]; then
+    if [ "$status" = "ok" ] && [ -n "$ts_ip" ]; then
+        display_status_line "ok" "Tailscale" "$ts_ip"
+    elif [ "$status" = "skip" ]; then
+        display_status_line "skip" "Tailscale" "未认证"
         echo "     方式1（推荐）: 创建容器时设置环境变量 TAILSCALEAUTHKEY" >&2
         echo "     方式2: 终端运行: sudo tailscale up --ssh" >&2
-        echo "     认证后可从其他设备通过 Tailscale IP 访问服务" >&2
-    elif [ "$status" = "ok" ] && [ -n "$ts_ip" ]; then
-        echo "     访问地址: http://${ts_ip}:20128 (OmniRoute) http://${ts_ip}:3001 (CloudCLI)" >&2
+    else
+        display_status_line "$status" "Tailscale" "$hint"
     fi
 
     # OmniRoute
     result=$(query_omniroute "${ts_ip:-localhost}")
     IFS='|' read -r status _ hint <<< "$result"
-    if [ "$status" = "skip" ]; then
-        display_status_line "skip" "OmniRoute" "未配置"
-        echo "     运行: oc（首次使用需配置 API key）" >&2
-        echo "     迁移旧数据: scp storage.sqlite codespace@<tailscale-ip>:~/.omniroute/" >&2
-        echo "                  scp .env codespace@<tailscale-ip>:~/.omniroute/" >&2
-    elif [ "$status" = "fail" ]; then
-        display_status_line "fail" "OmniRoute" "$hint"
-        echo "     运行: oc（配置 API key）" >&2
+    if [ "$status" = "ok" ]; then
+        display_status_line "ok" "OmniRoute" "$hint"
+        echo "     迁移旧数据（可选）:" >&2
+        echo "       scp storage.sqlite codespace@${ts_ip}:~/.omniroute/" >&2
+        echo "       scp .env codespace@${ts_ip}:~/.omniroute/" >&2
+    elif [ "$status" = "skip" ]; then
+        display_status_line "skip" "OmniRoute" "未安装"
     else
         display_status_line "$status" "OmniRoute" "$hint"
     fi
 
-    # claude-sync
-    if check_command claude-sync; then
-        if claude-sync status -q 2>/dev/null; then
-            display_status_line "ok" "claude-sync" "已配置"
-        else
-            display_status_line "skip" "claude-sync" "未配置（需运行: claude-sync init）"
-        fi
+    # CloudCLI
+    result=$(query_cloudcli "${ts_ip:-localhost}")
+    IFS='|' read -r status _ hint <<< "$result"
+    if [ "$status" = "ok" ]; then
+        display_status_line "ok" "CloudCLI" "$hint"
+    else
+        display_status_line "$status" "CloudCLI" "$hint"
     fi
 
     # 安装检查
