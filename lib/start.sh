@@ -24,18 +24,20 @@ start_tailscale() {
 
 # 启动 OmniRoute
 start_omniroute() {
+    local host="${1:-localhost}"
+
     if ! check_command omniroute; then
         record "OmniRoute" "skip" "" "未安装"
         return
     fi
 
-    if http_check_retry "http://localhost:20128" 3 2 2; then
-        record "OmniRoute" "ok" "" "http://localhost:20128"
+    if http_check_retry "http://${host}:20128" 3 2 2; then
+        record "OmniRoute" "ok" "" "http://${host}:20128"
     else
         omniroute serve --daemon > "$LOG_DIR/omniroute.log" 2>&1
         sleep 8
-        if http_check_retry "http://localhost:20128" 3 2 2; then
-            record "OmniRoute" "ok" "" "http://localhost:20128"
+        if http_check_retry "http://${host}:20128" 3 2 2; then
+            record "OmniRoute" "ok" "" "http://${host}:20128"
         else
             record "OmniRoute" "fail" "$LOG_DIR/omniroute.log" "启动失败"
         fi
@@ -44,13 +46,15 @@ start_omniroute() {
 
 # 启动 tmux 服务（CloudCLI）
 start_cloudcli() {
+    local host="${1:-localhost}"
+
     if ! check_command cloudcli; then
         record "CloudCLI" "skip" "" "未安装"
         return
     fi
 
     if is_service_running cloudcli cloudcli; then
-        record "CloudCLI" "ok" "" "已在运行"
+        record "CloudCLI" "ok" "" "http://${host}:3001"
         return
     fi
 
@@ -61,7 +65,7 @@ start_cloudcli() {
 
     tmux_start "cloudcli" "cloudcli" "$LOG_DIR/cloudcli.log"
     if is_service_running cloudcli cloudcli; then
-        record "CloudCLI" "ok" "" "已启动"
+        record "CloudCLI" "ok" "" "http://${host}:3001"
     else
         record "CloudCLI" "fail" "$LOG_DIR/cloudcli.log" "启动失败"
     fi
@@ -69,9 +73,12 @@ start_cloudcli() {
 
 # 启动所有服务
 start_services() {
+    local ts_ip
+    ts_ip=$(tailscale_ip)
+
     start_tailscale
-    start_omniroute
-    start_cloudcli
+    start_omniroute "${ts_ip:-localhost}"
+    start_cloudcli "${ts_ip:-localhost}"
 }
 
 # 生成状态报告
