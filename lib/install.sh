@@ -137,26 +137,26 @@ create_directories() {
 
 # 主安装流程
 run_setup() {
-    local failed=()
     local log_file="$LOG_DIR/setup.log"
+    local fail_count_file="$LOG_DIR/.fail_count"
     ensure_dir "$LOG_DIR"
 
-    # 所有安装输出写入日志文件，终端只显示关键结果
+    echo "0" > "$fail_count_file"
+
+    # 输出同时显示在终端和写入日志文件
     {
-        install_system_deps || failed+=("系统依赖")
-        install_tailscale || failed+=("Tailscale")
-        auth_tailscale || failed+=("Tailscale 认证")
-        install_claude || failed+=("Claude Code")
-        install_opencode || failed+=("OpenCode CLI")
-        install_npm_packages || failed+=("npm 包")
+        install_system_deps || { echo $(( $(cat "$fail_count_file") + 1 )) > "$fail_count_file"; }
+        install_tailscale || { echo $(( $(cat "$fail_count_file") + 1 )) > "$fail_count_file"; }
+        auth_tailscale || { echo $(( $(cat "$fail_count_file") + 1 )) > "$fail_count_file"; }
+        install_claude || { echo $(( $(cat "$fail_count_file") + 1 )) > "$fail_count_file"; }
+        install_opencode || { echo $(( $(cat "$fail_count_file") + 1 )) > "$fail_count_file"; }
+        install_npm_packages || { echo $(( $(cat "$fail_count_file") + 1 )) > "$fail_count_file"; }
         create_directories
 
-        # 配置 Claude Code hooks
         configure_claude_code_hooks
-    } > "$log_file" 2>&1
+    } 2>&1 | tee "$log_file"
 
-    # 返回失败数量（只有这一行输出到 stdout）
-    echo "${#failed[@]}"
+    cat "$fail_count_file"
 }
 
 # 配置 Claude Code hooks（Stop hook）

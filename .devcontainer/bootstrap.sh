@@ -24,11 +24,16 @@ cat >> "$BASHRC" << 'BASHRC_BLOCK'
 # >>> FreeCloudCode >>>
 _FCC_HOME="${FCC_HOME:-$HOME/freecloudcode}"
 
-# 首次安装（仅当 marker 不存在时）— 每次都检查，但幂等执行
+# 首次安装（仅当 marker 不存在时）— 后台运行，按回车跳过等待
 if [ ! -f "$HOME/.freecloudcode.setup.done" ]; then
     if [ -f "$_FCC_HOME/.devcontainer/setup.sh" ]; then
-        echo "🚀 FreeCloudCode 首次安装..."
-        bash "$_FCC_HOME/.devcontainer/setup.sh"
+        echo "🚀 FreeCloudCode 首次安装中（后台运行）..."
+        bash "$_FCC_HOME/.devcontainer/setup.sh" &
+        _FCC_SETUP_PID=$!
+        echo "   安装 PID: $_FCC_SETUP_PID"
+        echo "   按回车直接进入终端，安装继续在后台运行"
+        echo "   查看进度: tail -f ~/.freecloudcode/logs/setup.log"
+        read -t 10 -r _ 2>/dev/null || true
     fi
 fi
 
@@ -36,6 +41,13 @@ fi
 if [ -z "$_FCC_STARTUP_DONE" ]; then
     export _FCC_STARTUP_DONE=1
     if [ -f "$_FCC_HOME/.devcontainer/start.sh" ]; then
+        # 等待 setup.sh 完成（后台），最多等 5 秒
+        if [ -n "$_FCC_SETUP_PID" ]; then
+            for i in $(seq 1 5); do
+                kill -0 "$_FCC_SETUP_PID" 2>/dev/null || break
+                sleep 1
+            done
+        fi
         bash "$_FCC_HOME/.devcontainer/start.sh"
     fi
 fi
