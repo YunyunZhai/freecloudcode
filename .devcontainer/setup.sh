@@ -8,12 +8,25 @@ LIB_DIR="$SCRIPT_DIR/../lib"
 source "$LIB_DIR/utils.sh"
 source "$LIB_DIR/install.sh"
 
-# 幂等检查
+# 幂等检查 — 已完成则跳过
 if [ -f "$SETUP_MARKER" ]; then
     exit 0
 fi
 
+# 并发锁 — 防止多个终端同时运行 setup.sh
+LOCK_FILE="$LOG_DIR/setup.lock"
 ensure_dir "$LOG_DIR"
+if [ -f "$LOCK_FILE" ]; then
+    lock_pid=$(cat "$LOCK_FILE" 2>/dev/null)
+    if [ -n "$lock_pid" ] && kill -0 "$lock_pid" 2>/dev/null; then
+        echo "⏳ 安装进行中（PID $lock_pid），跳过..." >&2
+        exit 0
+    fi
+    # 旧锁，进程已不存在，清理
+    rm -f "$LOCK_FILE"
+fi
+echo $$ > "$LOCK_FILE"
+trap 'rm -f "$LOCK_FILE"' EXIT
 
 echo "========================================="
 echo " FreeCloudCode — 初始安装配置"
