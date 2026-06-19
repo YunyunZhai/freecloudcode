@@ -77,6 +77,22 @@ install_claude() {
     fi
 }
 
+# 安装 OpenCode CLI
+install_opencode() {
+    if check_command opencode; then
+        log_success "OpenCode CLI 已存在"
+        return 0
+    fi
+
+    if curl -fsSL https://opencode.ai/install | bash 2>/dev/null; then
+        log_success "OpenCode CLI 已安装"
+        return 0
+    else
+        log_warn "OpenCode CLI 安装失败"
+        return 1
+    fi
+}
+
 # 安装 npm 全局工具
 install_npm_packages() {
     local packages=(
@@ -128,6 +144,7 @@ run_setup() {
         install_tailscale || failed+=("Tailscale")
         auth_tailscale || failed+=("Tailscale 认证")
         install_claude || failed+=("Claude Code")
+        install_opencode || failed+=("OpenCode CLI")
         install_npm_packages || failed+=("npm 包")
         create_directories
 
