@@ -52,6 +52,7 @@ if [ ! -f "$CONFIG_HINT_SHOWN" ]; then
     if [ "$status" = "ok" ]; then
         display_status_line "ok" "OmniRoute" "$hint"
         echo "     迁移旧数据（可选）:" >&2
+        echo "       ⚠️  重要: 迁移前必须关闭两边的 OmniRoute" >&2
         echo "       scp storage.sqlite codespace@${ts_ip}:~/.omniroute/" >&2
         echo "       scp .env codespace@${ts_ip}:~/.omniroute/" >&2
     elif [ "$status" = "skip" ]; then
