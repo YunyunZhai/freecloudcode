@@ -2,6 +2,11 @@
 # start.sh — FreeCloudCode 每次开机启动服务
 # 由 devcontainer.json 的 postStartCommand 触发
 # 设计原则：不能阻塞启动流程，所有服务快速后台启动
+# 状态报告写入文件，由 ~/.bashrc 在每次登录时显示
+
+STATUS_DIR="$HOME/.freecloudcode"
+STATUS_FILE="$STATUS_DIR/startup-status.log"
+mkdir -p "$STATUS_DIR"
 
 # 确保 npm 全局命令在 PATH 中
 export PATH="$PATH:$HOME/.local/bin:$(npm config get prefix 2>/dev/null)/bin"
@@ -9,21 +14,17 @@ export PATH="$PATH:$HOME/.local/bin:$(npm config get prefix 2>/dev/null)/bin"
 # 等待 setup.sh 完成（首次创建时可能还在安装）
 SETUP_MARKER="$HOME/.freecloudcode.setup.done"
 if [ ! -f "$SETUP_MARKER" ]; then
-    echo "⟳ 等待 setup.sh 完成安装..."
+    echo "⟳ 等待 setup.sh 完成安装..." >&2
     for i in $(seq 1 60); do
         [ -f "$SETUP_MARKER" ] && break
         sleep 5
     done
     if [ ! -f "$SETUP_MARKER" ]; then
-        echo "⚠ setup.sh 超时（5分钟），跳过服务启动"
-        echo "⚠ 请在新终端运行: bash .devcontainer/setup.sh"
+        echo "⚠ setup.sh 超时（5分钟），跳过服务启动" >&2
+        echo "⚠ 请在新终端运行: bash .devcontainer/setup.sh" >&2
         exit 0
     fi
 fi
-
-echo "========================================="
-echo " FreeCloudCode — 启动服务"
-echo "========================================="
 
 # --- 状态追踪 ---
 declare -a SvcName=()
@@ -38,7 +39,6 @@ record() { SvcName+=("$1"); SvcStatus+=("$2"); SvcLog+=("${3:-}"); SvcHint+=("${
 if command -v tailscale &>/dev/null; then
     # 先确保 tailscaled 守护进程运行
     if ! pgrep -x tailscaled >/dev/null 2>&1; then
-        echo "⟳ 启动 tailscaled..."
         nohup sudo tailscaled </dev/null >/tmp/tailscaled.log 2>&1 &
         disown
         sleep 2
@@ -64,7 +64,6 @@ if command -v omniroute &>/dev/null; then
     if pgrep -f "omniroute" >/dev/null 2>&1; then
         record "OmniRoute" "ok" "" "http://localhost:20128"
     else
-        echo "⟳ 启动 OmniRoute..."
         omniroute serve --daemon >/tmp/omniroute.log 2>&1
         sleep 2
         if pgrep -f "omniroute" >/dev/null 2>&1; then
@@ -94,7 +93,6 @@ _tmux_run() {
     elif [ -n "$port" ] && ss -tlnp 2>/dev/null | grep -q ":${port} "; then
         record "$label" "fail" "" "端口 ${port} 已被占用"
     else
-        echo "⟳ 启动 $label..."
         tmux new-session -d -s "$name" \
             "bash -c '$cmd 2>&1 | tee /tmp/${name}.log; sleep infinity'"
         sleep 2
@@ -109,35 +107,41 @@ _tmux_run() {
 # ===== 4. CloudCLI =====
 _tmux_run cloudcli "cloudcli" "cloudcli" "CloudCLI" 3001
 
-# ===== 统一状态报告 =====
-echo ""
-echo "========================================="
-echo " 📋 启动状态报告"
-echo "========================================="
+# ===== 写入状态文件（供 ~/.bashrc 登录时显示） =====
+{
+    echo "========================================="
+    echo " 📋 启动状态报告"
+    echo "========================================="
 
-for i in "${!SvcName[@]}"; do
-    _name="${SvcName[$i]}"
-    _status="${SvcStatus[$i]}"
-    _log="${SvcLog[$i]}"
-    _hint="${SvcHint[$i]}"
+    for i in "${!SvcName[@]}"; do
+        _name="${SvcName[$i]}"
+        _status="${SvcStatus[$i]}"
+        _log="${SvcLog[$i]}"
+        _hint="${SvcHint[$i]}"
 
-    case "$_status" in
-        ok)
-            echo "  ✅ $_name — $_hint"
-            ;;
-        fail)
-            echo "  ❌ $_name — $_hint"
-            [ -n "$_log" ] && echo "     📄 日志: $_log"
-            ;;
-        skip)
-            echo "  ⏭  $_name — $_hint"
-            ;;
-    esac
-done
+        case "$_status" in
+            ok)
+                echo "  ✅ $_name — $_hint"
+                ;;
+            fail)
+                echo "  ❌ $_name — $_hint"
+                if [ -n "$_log" ] && [ -f "$_log" ]; then
+                    echo "     📄 日志: $_log"
+                    # 显示最后 5 行错误信息
+                    _tail=$(tail -5 "$_log" 2>/dev/null | sed 's/^/        /')
+                    [ -n "$_tail" ] && echo "$_tail"
+                fi
+                ;;
+            skip)
+                echo "  ⏭  $_name — $_hint"
+                ;;
+        esac
+    done
 
-echo ""
-echo "📌 命令速查:"
-echo "  启动:  scc(CloudCLI)  sbp(Bridge)"
-echo "  停止:  xcc(CloudCLI)  xbp(Bridge)  xor(OmniRoute)"
-echo "  别名:  cc(claude)  codex  oc(omniroute)  ccli(cloudcli)"
-echo ""
+    echo ""
+    echo "  🕐 $(date '+%Y-%m-%d %H:%M:%S')"
+    echo "========================================="
+} > "$STATUS_FILE"
+
+# 同时输出到 stderr（devcontainer 日志可查）
+cat "$STATUS_FILE" >&2

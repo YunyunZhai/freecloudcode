@@ -125,20 +125,64 @@ xor()  {
     fi
 }
 
+# 实时检查服务运行状态
+_fcc_check_services() {
+    local ts_ip=""
+
+    # 获取 Tailscale IP（用于其他服务的地址）
+    if command -v tailscale &>/dev/null; then
+        ts_ip=$(tailscale ip -4 2>/dev/null)
+    fi
+
+    echo "📋 服务状态:"
+    # Tailscale
+    if command -v tailscale &>/dev/null; then
+        if pgrep -x tailscaled >/dev/null 2>&1; then
+            if sudo tailscale status >/dev/null 2>&1; then
+                echo "  ✅ Tailscale — ${ts_ip:-已连接}"
+            else
+                echo "  ⚠️  Tailscale — 守护进程运行但未认证"
+            fi
+        else
+            echo "  ❌ Tailscale — 未运行"
+        fi
+    fi
+    # OmniRoute（HTTP 检测）
+    if command -v omniroute &>/dev/null; then
+        local or_addr="${ts_ip:-localhost}"
+        local or_code
+        or_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 2 --max-time 3 "http://${or_addr}:20128" 2>/dev/null)
+        if [[ "$or_code" =~ ^(200|301|302|304)$ ]]; then
+            echo "  ✅ OmniRoute — http://${or_addr}:20128"
+        else
+            echo "  ❌ OmniRoute — 未运行 (http://${or_addr}:20128)"
+        fi
+    fi
+    # CloudCLI（HTTP 检测）
+    local cc_addr="${ts_ip:-localhost}"
+    local cc_code
+    cc_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 2 --max-time 3 "http://${cc_addr}:3001" 2>/dev/null)
+    if [[ "$cc_code" =~ ^(200|301|302|304)$ ]]; then
+        echo "  ✅ CloudCLI — http://${cc_addr}:3001"
+    else
+        echo "  ❌ CloudCLI — 未运行 (http://${cc_addr}:3001)"
+    fi
+}
+
 # claude-sync 自动同步
 if command -v claude-sync &>/dev/null; then
     (claude-sync pull -q && claude-sync push -q) &>/dev/null &
 fi
 
-echo ""
-echo "🌊 FreeCloudCode 命令速查:"
-echo "  cc    — Claude Code        codex — OpenAI Codex"
-echo "  oc    — OmniRoute          ccli  — CloudCLI"
-echo "  pocket — CCPocket Bridge   cr    — 重连 Claude 会话"
-echo "  scc/xcc — 启动/停止 CloudCLI"
-echo "  sbp/xbp — 启动/停止 Bridge"
-echo "  xor     — 停止 OmniRoute"
-echo ""
+# 交互式终端才显示状态和命令速查
+if [[ $- == *i* ]]; then
+    echo ""
+    _fcc_check_services
+    echo ""
+    echo "📌 命令: cc(claude) codex oc(omniroute) ccli(cloudcli) pocket(bridge) cr(重连)"
+    echo "   服务: scc/xcc(CloudCLI) sbp/xbp(Bridge) xor(OmniRoute)"
+    echo ""
+fi
 
 fi  # _FCC_LOADED guard
 # <<< FreeCloudCode <<<
@@ -149,11 +193,15 @@ echo "✅ .bashrc 已配置"
 PROFILE="$HOME/.profile"
 PROFILE_MARKER="# >>> FreeCloudCode >>>"
 
+# 先清理旧的 FreeCloudCode .profile 块
 if grep -q "$PROFILE_MARKER" "$PROFILE" 2>/dev/null; then
     sed -i "/# >>> FreeCloudCode >>>/,/# <<< FreeCloudCode <<</d" "$PROFILE"
 fi
 
-cat >> "$PROFILE" << 'PROFILE_BLOCK'
+# 注意：Ubuntu 默认 .profile 已经会 source .bashrc，不需要重复添加
+# 如果 .profile 中没有 source .bashrc 的逻辑，才添加
+if ! grep -q '\.bashrc' "$PROFILE" 2>/dev/null || grep -q "$PROFILE_MARKER" "$PROFILE" 2>/dev/null; then
+    cat >> "$PROFILE" << 'PROFILE_BLOCK'
 
 # >>> FreeCloudCode >>>
 # Login shell 需要手动 source .bashrc（别名和服务管理函数在 .bashrc 中定义）
@@ -162,7 +210,10 @@ if [ -f "$HOME/.bashrc" ]; then
 fi
 # <<< FreeCloudCode <<<
 PROFILE_BLOCK
-echo "✅ .profile 已配置（login shell 生效）"
+    echo "✅ .profile 已配置（login shell 生效）"
+else
+    echo "✅ .profile 已有 .bashrc source，跳过"
+fi
 
 # ===== 6. 安装检查 =====
 echo ""
