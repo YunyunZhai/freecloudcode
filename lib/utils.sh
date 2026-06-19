@@ -1,87 +1,182 @@
 #!/bin/bash
-# lib/utils.sh — FreeCloudCode 工具函数
+# lib/utils.sh — FreeCloudCode 共享工具函数
 
-# 日志函数
-log_info() {
-    local msg="$1"
-    echo "ℹ️  $msg"
-}
+# ===== 常量 =====
+FCC_HOME="${FCC_HOME:-$HOME/freecloudcode}"
+SETUP_MARKER="$HOME/.freecloudcode.setup.done"
+STARTUP_MARKER="$HOME/.freecloudcode/startup-done"
+LOG_DIR="$HOME/.freecloudcode/logs"
 
-log_success() {
-    local msg="$1"
-    echo "✅ $msg"
-}
+# ===== 日志函数 =====
+log_info()    { echo "ℹ️  $1"; }
+log_success() { echo "✅ $1"; }
+log_warn()    { echo "⚠️  $1"; }
+log_error()   { echo "❌ $1"; }
 
-log_warn() {
-    local msg="$1"
-    echo "⚠️  $msg"
-}
+# ===== 基础检查 =====
+check_command() { command -v "$1" &>/dev/null; }
+check_file()    { [ -f "$1" ]; }
+ensure_dir()    { mkdir -p "$1"; }
 
-log_error() {
-    local msg="$1"
-    echo "❌ $msg"
-}
-
-# 检查命令是否存在
-check_command() {
-    local cmd="$1"
-    command -v "$cmd" &>/dev/null
-}
-
-# 检查文件是否存在
-check_file() {
-    local file="$1"
-    [ -f "$file" ]
-}
-
-# 检查目录是否存在，不存在则创建
-ensure_dir() {
-    local dir="$1"
-    mkdir -p "$dir"
-}
-
-# 运行命令并记录状态
-run_or_warn() {
-    local description="$1"
-    local cmd="$2"
-
-    if eval "$cmd" 2>/dev/null; then
-        return 0
-    else
-        log_warn "$description"
-        return 1
-    fi
-}
-
-# 获取 tailscale IP（简化版）
-get_tailscale_ip() {
-    if check_command tailscale; then
-        tailscale ip -4 2>/dev/null
-    fi
-}
-
-# HTTP 健康检查
+# ===== HTTP 检查 =====
+# http_check URL [timeout] — 单次 HTTP 检查
 http_check() {
-    local url="$1"
-    local timeout="${2:-2}"
-
+    local url="$1" timeout="${2:-2}"
     local code
     code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout "$timeout" --max-time "$timeout" "$url" 2>/dev/null)
     [[ "$code" =~ ^[23] ]]
 }
 
-# tmux 会话运行
-tmux_run() {
-    local name="$1"
-    local cmd="$2"
-    local log_file="$3"
+# http_check_retry URL [attempts] [interval] [timeout] — 带重试的 HTTP 检查
+http_check_retry() {
+    local url="$1" attempts="${2:-3}" interval="${3:-2}" timeout="${4:-2}"
+    local i code
+    for i in $(seq 1 "$attempts"); do
+        code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout "$timeout" --max-time "$timeout" "$url" 2>/dev/null)
+        [[ "$code" =~ ^[23] ]] && return 0
+        sleep "$interval"
+    done
+    return 1
+}
 
-    if tmux has-session -t "$name" 2>/dev/null; then
-        return 0
+# ===== 服务运行检测 =====
+# is_service_running NAME [cmd] — tmux session 或进程检查
+is_service_running() {
+    local name="$1" cmd="${2:-$1}"
+    tmux has-session -t "$name" 2>/dev/null || pgrep -f "$cmd" >/dev/null 2>&1
+}
+
+# ===== tmux 服务管理 =====
+# tmux_start NAME CMD LOG_FILE — 启动 tmux 服务
+tmux_start() {
+    local name="$1" cmd="$2" log_file="$3"
+
+    if is_service_running "$name" "$cmd"; then
+        return 0  # 已在运行
     fi
 
     tmux new-session -d -s "$name" \
         "bash -c '$cmd 2>&1 | tee \"$log_file\"; sleep infinity'"
     sleep 2
-    pgrep -f "$cmd" >/dev/null 2>&1
+    is_service_running "$name" "$cmd"
+}
+
+# tmux_stop NAME [cmd] — 停止 tmux 服务
+tmux_stop() {
+    local name="$1" cmd="${2:-$1}"
+    tmux kill-session -t "$name" 2>/dev/null
+    pkill -f "$cmd" 2>/dev/null
+}
+
+# ===== Tailscale =====
+# tailscale_ip — 获取 Tailscale IPv4
+tailscale_ip() {
+    check_command tailscale && tailscale ip -4 2>/dev/null
+}
+
+# tailscale_is_connected — 检查 Tailscale 是否已连接（成功返回 0）
+tailscale_is_connected() {
+    check_command tailscale || return 1
+    # 方法1: tailscale status
+    sudo tailscale status >/dev/null 2>&1 && return 0
+    # 方法2: 网络接口检测（非交互式环境可能 status 失败）
+    ip link show tailscale0 >/dev/null 2>&1 && return 0
+    return 1
+}
+
+# tailscale_is_daemon_running — tailscaled 守护进程是否运行
+tailscale_is_daemon_running() {
+    pgrep -x tailscaled >/dev/null 2>&1
+}
+
+# tailscale_ensure_daemon — 确保 tailscaled 守护进程运行
+tailscale_ensure_daemon() {
+    if ! tailscale_is_daemon_running; then
+        nohup sudo tailscaled </dev/null > "$LOG_DIR/tailscale.log" 2>&1 &
+        disown
+        sleep 2
+    fi
+}
+
+# tailscale_auth — 尝试 authkey 认证（成功返回 0）
+tailscale_auth() {
+    if [ -n "$TAILSCALEAUTHKEY" ]; then
+        sudo tailscale up --ssh --authkey="$TAILSCALEAUTHKEY" 2>/dev/null
+    else
+        return 1
+    fi
+}
+
+# ===== 服务状态查询 =====
+# query_tailscale — 输出 Tailscale 状态行
+query_tailscale() {
+    local ts_ip
+    ts_ip=$(tailscale_ip)
+
+    if ! check_command tailscale; then
+        echo "skip|Tailscale|未安装"
+        return
+    fi
+
+    if ! tailscale_is_daemon_running; then
+        echo "fail|Tailscale|未运行"
+        return
+    fi
+
+    if tailscale_is_connected; then
+        echo "ok|Tailscale|${ts_ip:-已连接}"
+    elif [ -n "$TAILSCALEAUTHKEY" ] && tailscale_auth; then
+        echo "ok|Tailscale|已通过 authkey 认证"
+    else
+        echo "skip|Tailscale|未认证"
+    fi
+}
+
+# query_omniroute [addr] — 输出 OmniRoute 状态行
+query_omniroute() {
+    local addr="${1:-localhost}"
+
+    if ! check_command omniroute; then
+        echo "skip|OmniRoute|未安装"
+        return
+    fi
+
+    if http_check_retry "http://${addr}:20128" 3 2 2; then
+        echo "ok|OmniRoute|http://${addr}:20128"
+    else
+        echo "fail|OmniRoute|http://${addr}:20128"
+    fi
+}
+
+# query_cloudcli [addr] — 输出 CloudCLI 状态行
+query_cloudcli() {
+    local addr="${1:-localhost}"
+
+    if http_check "http://${addr}:3001" 2 || is_service_running cloudcli cloudcli; then
+        echo "ok|CloudCLI|http://${addr}:3001"
+    else
+        echo "fail|CloudCLI|http://${addr}:3001"
+    fi
+}
+
+# ===== 状态显示 =====
+# display_status_line STATUS NAME HINT — 格式化显示一行状态
+display_status_line() {
+    local status="$1" name="$2" hint="$3"
+    case "$status" in
+        ok)   echo "  ✅ $name — $hint" ;;
+        fail) echo "  ❌ $name — $hint" ;;
+        skip) echo "  ⏭  $name — $hint" ;;
+    esac
+}
+
+# display_header — 显示状态标题
+display_header() {
+    echo "📋 服务状态:"
+}
+
+# display_commands — 显示命令速查
+display_commands() {
+    echo "📌 cc(claude) codex oc(omniroute) ccli(cloudcli) pocket(bridge) cr(重连)"
+    echo "   scc/xcc(CloudCLI) sbp/xbp(Bridge) xor(OmniRoute) fcc(状态)"
 }
