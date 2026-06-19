@@ -73,6 +73,7 @@ if [ ! -f "$CONFIG_HINT_SHOWN" ]; then
     if check_command claude-sync; then
         if claude-sync status -q 2>/dev/null; then
             display_status_line "ok" "claude-sync" "已配置"
+            echo "     同步方案: 开启终端自动同步 + claude stop 时同步" >&2
         else
             display_status_line "skip" "claude-sync" "未配置（需运行: claude-sync init）"
         fi
