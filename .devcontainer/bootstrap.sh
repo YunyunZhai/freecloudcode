@@ -11,6 +11,13 @@ if grep -q "$MARKER" "$BASHRC" 2>/dev/null; then
     exit 0
 fi
 
+# ===== 创建 ~/freecloudcode → /workspace/freecloudcode 符号链接 =====
+WORKSPACE="/workspace/freecloudcode"
+LINK="$HOME/freecloudcode"
+if [ -d "$WORKSPACE" ] && [ ! -e "$LINK" ]; then
+    ln -s "$WORKSPACE" "$LINK"
+fi
+
 # ===== 写入 .bashrc =====
 cat >> "$BASHRC" << 'BASHRC_BLOCK'
 
