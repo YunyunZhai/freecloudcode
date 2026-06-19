@@ -48,11 +48,36 @@ if [ ! -f "$CONFIG_HINT_SHOWN" ]; then
     if [ "$status" = "skip" ]; then
         display_status_line "skip" "OmniRoute" "未配置"
         echo "     运行: oc（首次使用需配置 API key）" >&2
+    elif [ "$status" = "fail" ]; then
+        display_status_line "fail" "OmniRoute" "$hint"
+        echo "     运行: oc（配置 API key）" >&2
     else
         display_status_line "$status" "OmniRoute" "$hint"
     fi
 
-    # 可用命令
+    # claude-sync
+    if check_command claude-sync; then
+        if claude-sync status -q 2>/dev/null; then
+            display_status_line "ok" "claude-sync" "已配置"
+        else
+            display_status_line "skip" "claude-sync" "未配置（需运行: claude-sync init）"
+        fi
+    fi
+
+    # 安装检查
+    echo "" >&2
+    echo "=========================================" >&2
+    echo " 📋 安装检查" >&2
+    echo "=========================================" >&2
+    for cmd in tailscale claude opencode omniroute cloudcli codex ccpocket-bridge claude-sync; do
+        if check_command "$cmd"; then
+            display_status_line "ok" "$cmd" "✓"
+        else
+            display_status_line "fail" "$cmd" "未找到"
+        fi
+    done
+
+    # 常用命令
     echo "" >&2
     echo "📌 常用命令:" >&2
     echo "   cc(claude) codex opencode oc(omniroute) ccli(cloudcli) pocket(bridge)" >&2
