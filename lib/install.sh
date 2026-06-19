@@ -53,11 +53,9 @@ auth_tailscale() {
     fi
 
     # 尝试 authkey
-    if [ -n "$TAILSCALEAUTHKEY" ]; then
-        if sudo tailscale up --ssh --authkey="$TAILSCALEAUTHKEY" 2>/dev/null; then
-            log_success "Tailscale 认证成功"
-            return 0
-        fi
+    if tailscale_auth; then
+        log_success "Tailscale 认证成功"
+        return 0
     fi
 
     log_warn "Tailscale 未认证（需手动运行: sudo tailscale up --ssh）"
