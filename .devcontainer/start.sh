@@ -76,7 +76,11 @@ if [ ! -f "$CONFIG_HINT_SHOWN" ]; then
             display_status_line "ok" "claude-sync" "已配置"
             echo "     同步方案: 开启终端自动同步 + claude stop 时同步" >&2
         else
-            display_status_line "skip" "claude-sync" "未配置（需运行: claude-sync init）"
+            display_status_line "skip" "claude-sync" "未配置"
+            echo "     方式1（推荐）: 在 Codespace 环境变量中设置:" >&2
+            echo "       CLAUDE_SYNC_ACCOUNT_ID, CLAUDE_SYNC_ACCESS_KEY," >&2
+            echo "       CLAUDE_SYNC_SECRET_KEY, CLAUDE_SYNC_BUCKET" >&2
+            echo "     方式2: 终端运行: claude-sync init" >&2
         fi
     fi
 
