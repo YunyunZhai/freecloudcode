@@ -14,14 +14,14 @@ export PATH="$PATH:$HOME/.local/bin:$(npm config get prefix 2>/dev/null)/bin"
 
 # 等待 setup.sh 完成（首次创建时可能还在安装）
 if [ ! -f "$SETUP_MARKER" ]; then
-    for i in $(seq 1 60); do
+    for i in $(seq 1 12); do
         printf "\r⏳ 等待安装完成... %ds" $((i * 5)) >&2
         [ -f "$SETUP_MARKER" ] && break
         sleep 5
     done
     echo "" >&2
     if [ ! -f "$SETUP_MARKER" ]; then
-        echo "⚠ 安装超时（5分钟），请在新终端运行: bash ~/freecloudcode/.devcontainer/setup.sh" >&2
+        echo "⚠ 安装未完成，服务未启动。稍后运行: bash ~/freecloudcode/.devcontainer/start.sh" >&2
         exit 0
     fi
 fi
