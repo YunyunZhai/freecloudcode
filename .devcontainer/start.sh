@@ -1,5 +1,6 @@
 #!/bin/bash
 # start.sh — FreeCloudCode 每次开机启动服务
+# 由 ~/.bashrc 每次打开终端时调用
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LIB_DIR="$SCRIPT_DIR/../lib"
@@ -14,19 +15,16 @@ export PATH="$PATH:$HOME/.local/bin:$(npm config get prefix 2>/dev/null)/bin"
 # 等待 setup.sh 完成（首次创建时可能还在安装）
 SETUP_MARKER="$HOME/.freecloudcode.setup.done"
 if [ ! -f "$SETUP_MARKER" ]; then
-    log_warn "等待 setup.sh 完成安装..."
+    echo "⏳ 等待安装完成..."
     for i in $(seq 1 60); do
         [ -f "$SETUP_MARKER" ] && break
         sleep 5
     done
     if [ ! -f "$SETUP_MARKER" ]; then
-        log_error "setup.sh 超时（5分钟），跳过服务启动"
-        echo "请在新终端运行: bash .devcontainer/setup.sh"
+        echo "⚠ 安装超时，请在新终端运行: bash ~/freecloudcode/.devcontainer/setup.sh"
         exit 0
     fi
 fi
 
 # 运行服务启动流程
 run_start
-
-echo "✅ 服务启动完成"

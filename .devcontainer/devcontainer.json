@@ -6,6 +6,7 @@
       "version": "lts"
     }
   },
+  "onCreateCommand": "bash .devcontainer/bootstrap.sh",
   "customizations": {
     "vscode": {
       "extensions": [

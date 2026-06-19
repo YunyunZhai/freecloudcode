@@ -1,5 +1,6 @@
 #!/bin/bash
 # setup.sh — FreeCloudCode 一次性安装配置
+# 由 ~/.bashrc 在首次打开终端时调用（非阻塞）
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LIB_DIR="$SCRIPT_DIR/../lib"
@@ -12,16 +13,11 @@ SETUP_MARKER="$HOME/.freecloudcode.setup.done"
 
 # 幂等检查
 if [ -f "$SETUP_MARKER" ]; then
-    log_success "FreeCloudCode 已初始化，跳过 setup"
     exit 0
 fi
 
 # 确保目录存在
 ensure_dir "$HOME/.freecloudcode/logs"
-
-# 日志同时输出到终端和文件
-SETUP_LOG="$HOME/.freecloudcode/logs/setup.log"
-exec > >(tee "$SETUP_LOG") 2>&1
 
 echo "========================================="
 echo " FreeCloudCode — 初始安装配置"
@@ -39,7 +35,6 @@ echo "========================================="
 echo " 🔧 配置提醒"
 echo "========================================="
 
-# Tailscale
 if check_command tailscale; then
     if sudo tailscale status >/dev/null 2>&1; then
         log_success "Tailscale — 已认证"
@@ -50,7 +45,6 @@ if check_command tailscale; then
     fi
 fi
 
-# OmniRoute
 if check_command omniroute; then
     if [ -f "$HOME/.omniroute/config.yaml" ] || [ -f "$HOME/.omniroute/config.json" ]; then
         log_success "OmniRoute — 已配置"
@@ -59,7 +53,6 @@ if check_command omniroute; then
     fi
 fi
 
-# claude-sync
 if check_command claude-sync; then
     if claude-sync status -q 2>/dev/null; then
         log_success "claude-sync — 已配置"
