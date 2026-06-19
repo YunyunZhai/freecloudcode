@@ -22,3 +22,18 @@ fi
 
 # 运行服务启动流程
 run_start
+
+# 首次安装完成后显示配置提醒（只显示一次）
+CONFIG_HINT_SHOWN="$HOME/.freecloudcode/.config-hint-shown"
+if [ ! -f "$CONFIG_HINT_SHOWN" ]; then
+    LOG_FILE="$HOME/.freecloudcode/logs/setup.log"
+    if [ -f "$LOG_FILE" ]; then
+        # 从日志中提取配置提醒部分（从 "🔧 配置提醒" 开始）
+        HINT=$(awk '/^===========+$/{found=0} /🔧 配置提醒/{found=1} found' "$LOG_FILE")
+        if [ -n "$HINT" ]; then
+            echo "" >&2
+            echo "$HINT" >&2
+        fi
+    fi
+    touch "$CONFIG_HINT_SHOWN"
+fi
