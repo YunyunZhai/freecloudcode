@@ -156,7 +156,6 @@ run_setup() {
         install_npm_packages || { echo $(( $(cat "$fail_count_file") + 1 )) > "$fail_count_file"; }
         create_directories
 
-        auto_configure_claude_sync
         configure_claude_code_hooks
     } 2>&1 | tee "$log_file"
 
@@ -198,44 +197,5 @@ configure_claude_code_hooks() {
 }
 EOF
         log_success "Claude Code Stop hook 已配置"
-    fi
-}
-
-# 自动配置 claude-sync（Cloudflare R2）
-auto_configure_claude_sync() {
-    if ! check_command claude-sync; then
-        return 0
-    fi
-
-    # 已配置则跳过
-    if claude-sync status -q 2>/dev/null; then
-        log_success "claude-sync 已配置"
-        return 0
-    fi
-
-    # 检查必需环境变量
-    if [ -z "$CLAUDE_SYNC_ACCOUNT_ID" ] || [ -z "$CLAUDE_SYNC_ACCESS_KEY" ] || \
-       [ -z "$CLAUDE_SYNC_SECRET_KEY" ] || [ -z "$CLAUDE_SYNC_BUCKET" ]; then
-        log_warn "claude-sync 未配置（缺少环境变量，需手动运行: claude-sync init）"
-        return 1
-    fi
-
-    # 构建参数
-    local args=(
-        --provider r2
-        --account-id "$CLAUDE_SYNC_ACCOUNT_ID"
-        --access-key "$CLAUDE_SYNC_ACCESS_KEY"
-        --secret-key "$CLAUDE_SYNC_SECRET_KEY"
-        --bucket "$CLAUDE_SYNC_BUCKET"
-        --force --quiet
-    )
-    [ -n "$CLAUDE_SYNC_PASSPHRASE" ] && args+=(--passphrase "$CLAUDE_SYNC_PASSPHRASE")
-
-    # 执行初始化
-    if claude-sync init "${args[@]}" 2>&1; then
-        log_success "claude-sync 已自动配置"
-    else
-        log_warn "claude-sync 配置失败"
-        return 1
     fi
 }
