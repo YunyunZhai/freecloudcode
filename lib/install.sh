@@ -100,20 +100,23 @@ install_npm_packages() {
         "omniroute"
         "@cloudcli-ai/cloudcli"
         "@openai/codex"
-        "@ccpocket/bridge"
+        "@ccpocket/bridge:ccpocket-bridge"
         "@tawandotorg/claude-sync"
     )
     local failed=0
 
     for pkg in "${packages[@]}"; do
-        # 取包名最后一段作为命令名（如 @openai/codex → codex）
-        local bin_name="${pkg##*/}"
+        # 格式: 包名 或 包名:命令名
+        local pkg_name="${pkg%%:*}"
+        local bin_name="${pkg#*:}"
+        [ "$bin_name" = "$pkg_name" ] && bin_name="${pkg_name##*/}"
+
         if check_command "$bin_name" 2>/dev/null; then
-            log_success "$pkg 已存在"
-        elif npm install -g "$pkg" 2>&1 | tail -1 >/dev/null; then
-            log_success "$pkg 已安装"
+            log_success "$pkg_name 已存在"
+        elif npm install -g "$pkg_name" 2>&1 | tail -1 >/dev/null; then
+            log_success "$pkg_name 已安装"
         else
-            log_warn "$pkg 安装失败"
+            log_warn "$pkg_name 安装失败"
             failed=1
         fi
     done
