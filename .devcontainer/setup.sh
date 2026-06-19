@@ -215,6 +215,43 @@ else
     echo "✅ .profile 已有 .bashrc source，跳过"
 fi
 
+# ===== 5c. Claude Code hooks 配置 =====
+CLAUDE_SETTINGS="$HOME/.claude/settings.json"
+mkdir -p "$HOME/.claude"
+
+# 合并 Stop hook（保留已有配置）
+if [ -f "$CLAUDE_SETTINGS" ]; then
+    # 已有配置，检查是否已有 Stop hook
+    if ! jq -e '.hooks.Stop' "$CLAUDE_SETTINGS" >/dev/null 2>&1; then
+        # 没有 Stop hook，追加
+        jq '.hooks += {"Stop": [{"hooks": [{"type": "command", "command": "claude-sync pull -q && claude-sync push -q", "timeout": 30, "statusMessage": "claude-sync 同步中..."}]}]}' "$CLAUDE_SETTINGS" > "${CLAUDE_SETTINGS}.tmp" && mv "${CLAUDE_SETTINGS}.tmp" "$CLAUDE_SETTINGS"
+        echo "✅ Claude Code Stop hook 已配置"
+    else
+        echo "✅ Claude Code Stop hook 已存在"
+    fi
+else
+    # 不存在，创建
+    cat > "$CLAUDE_SETTINGS" << 'SETTINGS_EOF'
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-sync pull -q && claude-sync push -q",
+            "timeout": 30,
+            "statusMessage": "claude-sync 同步中..."
+          }
+        ]
+      }
+    ]
+  }
+}
+SETTINGS_EOF
+    echo "✅ Claude Code Stop hook 已配置"
+fi
+
 # ===== 6. 安装检查 =====
 echo ""
 echo "========================================="
