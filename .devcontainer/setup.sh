@@ -30,7 +30,7 @@ trap 'rm -f "$LOCK_FILE"' EXIT
 
 echo "========================================="
 echo " FreeCloudCode — 初始安装配置"
-echo "========================================="
+echo "=========================================" | tee -a "$LOG_DIR/setup.log"
 
 FAILED_COUNT=$(run_setup)
 FAILED_COUNT="${FAILED_COUNT:-0}"
@@ -38,7 +38,8 @@ FAILED_COUNT="${FAILED_COUNT:-0}"
 # 写入完成标记
 touch "$SETUP_MARKER"
 
-# 显示配置提醒
+# 显示配置提醒（同时写入日志文件）
+{
 echo ""
 echo "========================================="
 echo " 🔧 配置提醒"
@@ -100,3 +101,4 @@ if [ "$FAILED_COUNT" -eq 0 ]; then
 else
     echo "⚠️  有 $FAILED_COUNT 个工具安装失败，日志: ~/.freecloudcode/logs/setup.log"
 fi
+} | tee -a "$LOG_DIR/setup.log"
