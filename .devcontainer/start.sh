@@ -26,14 +26,38 @@ run_start
 # 首次安装完成后显示配置提醒（只显示一次）
 CONFIG_HINT_SHOWN="$HOME/.freecloudcode/.config-hint-shown"
 if [ ! -f "$CONFIG_HINT_SHOWN" ]; then
-    LOG_FILE="$HOME/.freecloudcode/logs/setup.log"
-    if [ -f "$LOG_FILE" ]; then
-        # 从日志中提取配置提醒部分（从 "🔧 配置提醒" 开始）
-        HINT=$(awk '/^===========+$/{found=0} /🔧 配置提醒/{found=1} found' "$LOG_FILE")
-        if [ -n "$HINT" ]; then
-            echo "" >&2
-            echo "$HINT" >&2
-        fi
+    ts_ip=$(tailscale_ip)
+
+    echo "" >&2
+    echo "=========================================" >&2
+    echo " 🔧 配置提醒" >&2
+    echo "=========================================" >&2
+
+    # Tailscale
+    result=$(query_tailscale)
+    IFS='|' read -r status _ hint <<< "$result"
+    display_status_line "$status" "Tailscale" "$hint"
+    if [ "$status" = "skip" ]; then
+        echo "     方式1（推荐）: 创建容器时设置环境变量 TAILSCALEAUTHKEY" >&2
+        echo "     方式2: 终端运行: sudo tailscale up --ssh" >&2
     fi
+
+    # OmniRoute
+    result=$(query_omniroute "${ts_ip:-localhost}")
+    IFS='|' read -r status _ hint <<< "$result"
+    if [ "$status" = "skip" ]; then
+        display_status_line "skip" "OmniRoute" "未配置"
+        echo "     运行: oc（首次使用需配置 API key）" >&2
+    else
+        display_status_line "$status" "OmniRoute" "$hint"
+    fi
+
+    # 可用命令
+    echo "" >&2
+    echo "📌 常用命令:" >&2
+    echo "   cc(claude) codex opencode oc(omniroute) ccli(cloudcli) pocket(bridge)" >&2
+    echo "   scc/xcc(CloudCLI) sbp/xbp(Bridge) son/xor(OmniRoute) fcc(状态)" >&2
+
+    echo "" >&2
     touch "$CONFIG_HINT_SHOWN"
 fi
