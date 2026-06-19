@@ -13,7 +13,6 @@ source "$LIB_DIR/start.sh"
 export PATH="$PATH:$HOME/.local/bin:$(npm config get prefix 2>/dev/null)/bin"
 
 # 等待 setup.sh 完成（首次创建时可能还在安装）
-SETUP_MARKER="$HOME/.freecloudcode.setup.done"
 if [ ! -f "$SETUP_MARKER" ]; then
     for i in $(seq 1 60); do
         printf "\r⏳ 等待安装完成... %ds" $((i * 5)) >&2
