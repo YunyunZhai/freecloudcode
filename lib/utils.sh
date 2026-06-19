@@ -2,20 +2,16 @@
 # lib/utils.sh — FreeCloudCode 共享工具函数
 
 # ===== 常量 =====
-FCC_HOME="${FCC_HOME:-$HOME/freecloudcode}"
 SETUP_MARKER="$HOME/.freecloudcode.setup.done"
 STARTUP_MARKER="$HOME/.freecloudcode/startup-done"
 LOG_DIR="$HOME/.freecloudcode/logs"
 
 # ===== 日志函数（输出到 stderr，避免污染 $() 捕获） =====
-log_info()    { echo "ℹ️  $1" >&2; }
 log_success() { echo "✅ $1" >&2; }
 log_warn()    { echo "⚠️  $1" >&2; }
-log_error()   { echo "❌ $1" >&2; }
 
 # ===== 基础检查 =====
 check_command() { command -v "$1" &>/dev/null; }
-check_file()    { [ -f "$1" ]; }
 ensure_dir()    { mkdir -p "$1"; }
 
 # ===== HTTP 检查 =====
@@ -181,10 +177,4 @@ display_status_line() {
 # display_header — 显示状态标题
 display_header() {
     echo "📋 服务状态:"
-}
-
-# display_commands — 显示命令速查
-display_commands() {
-    echo "📌 cc(claude) codex opencode oc(omniroute) ccli(cloudcli) pocket(bridge) cr(重连) fcc(状态)"
-    echo "   scc/xcc(CloudCLI) sbp/xbp(Bridge) son/xor(OmniRoute)"
 }

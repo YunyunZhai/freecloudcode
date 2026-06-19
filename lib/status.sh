@@ -27,17 +27,3 @@ show_status() {
     IFS='|' read -r status name hint <<< "$result"
     display_status_line "$status" "$name" "$hint"
 }
-
-# 等待启动完成
-wait_for_startup() {
-    local timeout="${1:-30}"
-    if [ -f "$STARTUP_MARKER" ]; then return 0; fi
-    if ! pgrep -f "start.sh" >/dev/null 2>&1; then return 0; fi
-
-    echo "⏳ 等待服务启动..."
-    local _w
-    for _w in $(seq 1 "$timeout"); do
-        [ -f "$STARTUP_MARKER" ] && break
-        sleep 1
-    done
-}
