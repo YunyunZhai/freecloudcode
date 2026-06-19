@@ -20,6 +20,7 @@ echo " FreeCloudCode — 初始安装配置"
 echo "========================================="
 
 FAILED_COUNT=$(run_setup)
+FAILED_COUNT="${FAILED_COUNT:-0}"
 
 # 写入完成标记
 touch "$SETUP_MARKER"
@@ -31,6 +32,7 @@ echo " 🔧 配置提醒"
 echo "========================================="
 
 # Tailscale
+ts_ip=$(tailscale_ip)
 result=$(query_tailscale)
 IFS='|' read -r status _ hint <<< "$result"
 display_status_line "$status" "Tailscale" "$hint"
@@ -40,7 +42,7 @@ if [ "$status" = "skip" ]; then
 fi
 
 # OmniRoute
-result=$(query_omniroute)
+result=$(query_omniroute "${ts_ip:-localhost}")
 IFS='|' read -r status _ hint <<< "$result"
 if [ "$status" = "skip" ]; then
     display_status_line "skip" "OmniRoute" "未配置（首次使用需运行: oc）"

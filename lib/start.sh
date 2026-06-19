@@ -73,10 +73,12 @@ start_cloudcli() {
 
 # 启动所有服务
 start_services() {
+    start_tailscale
+
+    # Tailscale IP 在 start_tailscale 之后获取
     local ts_ip
     ts_ip=$(tailscale_ip)
 
-    start_tailscale
     start_omniroute "${ts_ip:-localhost}"
     start_cloudcli "${ts_ip:-localhost}"
 }

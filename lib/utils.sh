@@ -185,6 +185,6 @@ display_header() {
 
 # display_commands — 显示命令速查
 display_commands() {
-    echo "📌 cc(claude) codex oc(omniroute) ccli(cloudcli) pocket(bridge) cr(重连)"
-    echo "   scc/xcc(CloudCLI) sbp/xbp(Bridge) xor(OmniRoute) fcc(状态)"
+    echo "📌 cc(claude) codex opencode oc(omniroute) ccli(cloudcli) pocket(bridge) cr(重连) fcc(状态)"
+    echo "   scc/xcc(CloudCLI) sbp/xbp(Bridge) son/xor(OmniRoute)"
 }
