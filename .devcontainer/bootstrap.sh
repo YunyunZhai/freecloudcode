@@ -61,6 +61,9 @@ alias pocket='ccpocket-bridge'
 alias cr='CLAUDE_CODE_ENTRYPOINT=sdk-cli claude -r'
 alias fcc='bash -c "source ~/freecloudcode/lib/utils.sh; source ~/freecloudcode/lib/status.sh; show_status"'
 
+# 服务管理函数依赖 utils.sh 中的 tmux_start/tmux_stop
+source "$_FCC_HOME/lib/utils.sh"
+
 # ===== 服务管理 =====
 scc() { tmux_start cloudcli cloudcli ~/.freecloudcode/logs/cloudcli.log && echo "✓ CloudCLI 已启动"; }
 xcc() { tmux_stop cloudcli cloudcli; echo "✓ CloudCLI 已停止"; }

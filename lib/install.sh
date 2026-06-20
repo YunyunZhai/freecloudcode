@@ -86,6 +86,8 @@ install_opencode() {
     fi
 
     if curl -fsSL https://opencode.ai/install | bash 2>/dev/null; then
+        # 立即更新 PATH，确保后续 check_command 能找到
+        export PATH="$HOME/.opencode/bin:$PATH"
         log_success "OpenCode CLI 已安装"
         return 0
     else
@@ -96,21 +98,12 @@ install_opencode() {
 
 # 安装 npm 全局工具
 install_npm_packages() {
-    local packages=(
-        "omniroute"
-        "@cloudcli-ai/cloudcli"
-        "@openai/codex"
-        "@ccpocket/bridge:ccpocket-bridge"
-        "cc-connect"
-        "@tawandotorg/claude-sync"
-    )
     local failed=0
 
-    for pkg in "${packages[@]}"; do
-        # 格式: 包名 或 包名:命令名
+    for pkg in "${NPM_PACKAGES[@]}"; do
         local pkg_name="${pkg%%:*}"
-        local bin_name="${pkg#*:}"
-        [ "$bin_name" = "$pkg_name" ] && bin_name="${pkg_name##*/}"
+        local bin_name
+        bin_name=$(npm_bin_name "$pkg")
 
         if check_command "$bin_name" 2>/dev/null; then
             log_success "$pkg_name 已存在"

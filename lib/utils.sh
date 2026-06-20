@@ -163,6 +163,26 @@ query_cloudcli() {
     fi
 }
 
+# ===== npm 包管理 =====
+# 格式: "包名" 或 "包名:命令名"
+NPM_PACKAGES=(
+    "omniroute"
+    "@cloudcli-ai/cloudcli"
+    "@openai/codex"
+    "@ccpocket/bridge:ccpocket-bridge"
+    "cc-connect"
+    "@tawandotorg/claude-sync"
+)
+
+# npm_bin_name PKG_SPEC — 从包规格中提取命令名
+npm_bin_name() {
+    local pkg="$1"
+    local pkg_name="${pkg%%:*}"
+    local bin_name="${pkg#*:}"
+    [ "$bin_name" = "$pkg_name" ] && bin_name="${pkg_name##*/}"
+    echo "$bin_name"
+}
+
 # ===== 状态显示 =====
 # display_status_line STATUS NAME HINT — 格式化显示一行状态
 display_status_line() {
