@@ -6,8 +6,12 @@ BASHRC="$HOME/.bashrc"
 PROFILE="$HOME/.profile"
 MARKER="# >>> FreeCloudCode >>>"
 
-# 已有则跳过
+# 已有则检查是否缺少关键行（旧版可能缺少 source utils.sh）
 if grep -q "$MARKER" "$BASHRC" 2>/dev/null; then
+    # 修复：旧版 .bashrc 可能缺少 source utils.sh，导致 tmux_start/tmux_stop 不可用
+    if ! grep -q 'source.*utils\.sh' "$BASHRC" 2>/dev/null; then
+        sed -i '/^# ===== 服务管理 =====$/i\# 服务管理函数依赖 utils.sh 中的 tmux_start/tmux_stop\nsource "$_FCC_HOME/lib/utils.sh"\n' "$BASHRC"
+    fi
     exit 0
 fi
 

@@ -10,7 +10,7 @@ source "$LIB_DIR/utils.sh"
 source "$LIB_DIR/start.sh"
 
 # 确保 npm 全局命令在 PATH 中
-export PATH="$PATH:$HOME/.local/bin:$(npm config get prefix 2>/dev/null)/bin"
+export PATH="$PATH:$HOME/.local/bin:$(npm config get prefix 2>/dev/null)/bin:$HOME/.opencode/bin"
 
 # 等待 setup.sh 完成（首次创建时可能还在安装）
 if [ ! -f "$SETUP_MARKER" ]; then

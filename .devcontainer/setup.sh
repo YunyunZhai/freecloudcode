@@ -13,6 +13,9 @@ if [ -f "$SETUP_MARKER" ]; then
     exit 0
 fi
 
+# 确保 opencode 等工具在 PATH 中（install_opencode 在子 shell 中 export 的 PATH 不会传播出来）
+export PATH="$HOME/.opencode/bin:$PATH:$HOME/.local/bin:$(npm config get prefix 2>/dev/null)/bin"
+
 # 并发锁 — 防止多个终端同时运行 setup.sh
 LOCK_FILE="$LOG_DIR/setup.lock"
 ensure_dir "$LOG_DIR"
