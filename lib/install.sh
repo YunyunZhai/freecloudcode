@@ -101,6 +101,7 @@ install_npm_packages() {
         "@cloudcli-ai/cloudcli"
         "@openai/codex"
         "@ccpocket/bridge:ccpocket-bridge"
+        "cc-connect"
         "@tawandotorg/claude-sync"
     )
     local failed=0

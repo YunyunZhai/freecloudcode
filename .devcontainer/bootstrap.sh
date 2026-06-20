@@ -64,6 +64,8 @@ alias fcc='bash -c "source ~/freecloudcode/lib/utils.sh; source ~/freecloudcode/
 # ===== 服务管理 =====
 scc() { tmux_start cloudcli cloudcli ~/.freecloudcode/logs/cloudcli.log && echo "✓ CloudCLI 已启动"; }
 xcc() { tmux_stop cloudcli cloudcli; echo "✓ CloudCLI 已停止"; }
+sccn() { tmux_start cc-connect cc-connect ~/.cc-connect/logs/cc-connect.log && echo "✓ cc-connect 已启动"; }
+xccn() { tmux_stop cc-connect cc-connect; echo "✓ cc-connect 已停止"; }
 sbp() { tmux_start bridge ccpocket-bridge ~/.freecloudcode/logs/bridge.log && echo "✓ Bridge 已启动"; }
 xbp() { tmux_stop bridge ccpocket-bridge; echo "✓ Bridge 已停止"; }
 son() {
@@ -84,7 +86,7 @@ xor() {
 # ===== 状态提示（仅交互式终端） =====
 if [[ $- == *i* ]]; then
     echo "📌 cc(claude) codex opencode oc(omniroute) ccli(cloudcli) pocket(bridge) cr(重连) fcc(状态)"
-    echo "   scc/xcc(CloudCLI) sbp/xbp(Bridge) son/xor(OmniRoute)"
+    echo "   scc/xcc(CloudCLI) sbp/xbp(Bridge) son/xor(OmniRoute) sccn/xccn(cc-conect)"
 fi
 
 # <<< FreeCloudCode <<<

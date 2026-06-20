@@ -98,7 +98,7 @@ if [ ! -f "$CONFIG_HINT_SHOWN" ]; then
     echo "" >&2
     echo "📌 常用命令:" >&2
     echo "   cc(claude) codex opencode oc(omniroute) ccli(cloudcli) pocket(bridge)" >&2
-    echo "   scc/xcc(CloudCLI) sbp/xbp(Bridge) son/xor(OmniRoute) fcc(状态)" >&2
+    echo "   scc/xcc(CloudCLI) sbp/xbp(Bridge) son/xor(OmniRoute) sccn/xccn(cc-conect) fcc(状态)" >&2
 
     echo "" >&2
     touch "$CONFIG_HINT_SHOWN"
