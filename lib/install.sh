@@ -156,33 +156,46 @@ run_setup() {
     cat "$fail_count_file"
 }
 
-# 配置 Claude Code hooks（Stop hook）
+# 配置 Claude Code hooks（SessionStart + SessionEnd hook）
 configure_claude_code_hooks() {
     local settings="$HOME/.claude/settings.json"
     ensure_dir "$HOME/.claude"
 
-    local sync_cmd='if claude-sync status -q 2>/dev/null; then claude-sync pull -q && claude-sync push -q; fi'
-
     if [ -f "$settings" ]; then
-        if ! jq -e '.hooks.Stop' "$settings" >/dev/null 2>&1; then
-            # 没有 Stop hook，追加
-            jq --arg cmd "$sync_cmd" \
-               '.hooks += {"Stop": [{"hooks": [{"type": "command", "command": $cmd, "timeout": 30, "statusMessage": "claude-sync 同步中..."}]}]}' \
+        if ! jq -e '.hooks.SessionStart' "$settings" >/dev/null 2>&1; then
+            # 没有 SessionStart hook，追加（同时删除旧的 Stop hook）
+            jq 'del(.hooks.Stop)
+                | .hooks += {
+                    "SessionStart": [{"hooks": [{"type": "command", "command": "claude-sync pull", "timeout": 30, "statusMessage": "🔄 同步云端配置..."}]}],
+                    "SessionEnd": [{"hooks": [{"type": "command", "command": "claude-sync push -q", "timeout": 30, "statusMessage": "📤 推送本地配置..."}]}]
+                  }' \
                "$settings" > "${settings}.tmp" && mv "${settings}.tmp" "$settings"
-            log_success "Claude Code Stop hook 已配置"
+            log_success "Claude Code hooks 已配置（SessionStart + SessionEnd）"
         fi
     else
         cat > "$settings" << EOF
 {
   "hooks": {
-    "Stop": [
+    "SessionStart": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "$sync_cmd",
+            "command": "claude-sync pull",
             "timeout": 30,
-            "statusMessage": "claude-sync 同步中..."
+            "statusMessage": "🔄 同步云端配置..."
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-sync push -q",
+            "timeout": 30,
+            "statusMessage": "📤 推送本地配置..."
           }
         ]
       }
@@ -190,6 +203,6 @@ configure_claude_code_hooks() {
   }
 }
 EOF
-        log_success "Claude Code Stop hook 已配置"
+        log_success "Claude Code hooks 已配置（SessionStart + SessionEnd）"
     fi
 }
