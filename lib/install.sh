@@ -156,21 +156,21 @@ run_setup() {
     cat "$fail_count_file"
 }
 
-# 配置 Claude Code hooks（SessionStart + SessionEnd hook）
+# 配置 Claude Code hooks（SessionStart + Stop + SessionEnd hook）
 configure_claude_code_hooks() {
     local settings="$HOME/.claude/settings.json"
     ensure_dir "$HOME/.claude"
 
     if [ -f "$settings" ]; then
         if ! jq -e '.hooks.SessionStart' "$settings" >/dev/null 2>&1; then
-            # 没有 SessionStart hook，追加（同时删除旧的 Stop hook）
-            jq 'del(.hooks.Stop)
-                | .hooks += {
+            # 没有 SessionStart hook，追加（同时添加 Stop hook）
+            jq '.hooks += {
                     "SessionStart": [{"hooks": [{"type": "command", "command": "claude-sync pull", "timeout": 30, "statusMessage": "🔄 同步云端配置..."}]}],
+                    "Stop": [{"hooks": [{"type": "command", "command": "claude-sync push -q", "timeout": 30, "statusMessage": "📤 推送本地配置..."}]}],
                     "SessionEnd": [{"hooks": [{"type": "command", "command": "claude-sync push -q", "timeout": 30, "statusMessage": "📤 推送本地配置..."}]}]
                   }' \
                "$settings" > "${settings}.tmp" && mv "${settings}.tmp" "$settings"
-            log_success "Claude Code hooks 已配置（SessionStart + SessionEnd）"
+            log_success "Claude Code hooks 已配置（SessionStart + Stop + SessionEnd）"
         fi
     else
         cat > "$settings" << EOF
@@ -184,6 +184,18 @@ configure_claude_code_hooks() {
             "command": "claude-sync pull",
             "timeout": 30,
             "statusMessage": "🔄 同步云端配置..."
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-sync push -q",
+            "timeout": 30,
+            "statusMessage": "📤 推送本地配置..."
           }
         ]
       }
@@ -203,6 +215,6 @@ configure_claude_code_hooks() {
   }
 }
 EOF
-        log_success "Claude Code hooks 已配置（SessionStart + SessionEnd）"
+        log_success "Claude Code hooks 已配置（SessionStart + Stop + SessionEnd）"
     fi
 }
