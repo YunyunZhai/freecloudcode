@@ -88,7 +88,10 @@ tailscale_is_daemon_running() {
 # tailscale_ensure_daemon — 确保 tailscaled 守护进程运行
 tailscale_ensure_daemon() {
     if ! tailscale_is_daemon_running; then
-        nohup sudo tailscaled </dev/null > "$LOG_DIR/tailscale.log" 2>&1 &
+        nohup sudo tailscaled \
+            --socks5-server=0.0.0.0:1080 \
+            --outbound-http-proxy-listen=0.0.0.0:8080 \
+            </dev/null > "$LOG_DIR/tailscale.log" 2>&1 &
         disown
         sleep 2
     fi
