@@ -86,7 +86,7 @@ if [ ! -f "$CONFIG_HINT_SHOWN" ]; then
     echo "=========================================" >&2
     echo " 📋 安装检查" >&2
     echo "=========================================" >&2
-    for cmd in tailscale claude opencode omniroute cloudcli codex ccpocket-bridge claude-sync; do
+    for cmd in tailscale claude opencode omniroute cloudcli codex cc-connect ccpocket-bridge claude-sync; do
         if check_command "$cmd"; then
             display_status_line "ok" "$cmd" "✓"
         else

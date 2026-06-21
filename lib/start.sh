@@ -71,6 +71,28 @@ start_cloudcli() {
     fi
 }
 
+# 启动 cc-connect
+start_ccconnect() {
+    if ! check_command cc-connect; then
+        record "cc-connect" "skip" "" "未安装"
+        return
+    fi
+
+    if is_service_running cc-connect cc-connect; then
+        record "cc-connect" "ok" "" "已运行"
+        return
+    fi
+
+    local log_dir="$HOME/.cc-connect/logs"
+    ensure_dir "$log_dir"
+    tmux_start "cc-connect" "cc-connect" "$log_dir/cc-connect.log"
+    if is_service_running cc-connect cc-connect; then
+        record "cc-connect" "ok" "" "已启动"
+    else
+        record "cc-connect" "fail" "$log_dir/cc-connect.log" "启动失败"
+    fi
+}
+
 # 启动所有服务
 start_services() {
     start_tailscale
@@ -85,6 +107,7 @@ start_services() {
 
     start_omniroute "${ts_ip:-localhost}"
     start_cloudcli "${ts_ip:-localhost}"
+    start_ccconnect
 }
 
 # 生成状态报告
