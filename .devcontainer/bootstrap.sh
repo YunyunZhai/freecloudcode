@@ -90,8 +90,9 @@ xor() {
     echo "⚠ OmniRoute 未运行"
 }
 
-# ===== 状态提示（仅交互式终端） =====
-if [[ $- == *i* ]]; then
+# ===== 状态提示（仅交互式终端，只显示一次） =====
+if [[ $- == *i* ]] && [ -z "$_FCC_HINTS_PRINTED" ]; then
+    export _FCC_HINTS_PRINTED=1
     echo "📌 cc(claude) codex opencode oc(omniroute) ccli(cloudcli) pocket(bridge) cr(重连) fcc(状态)"
     echo "   scc/xcc(CloudCLI) sbp/xbp(Bridge) son/xor(OmniRoute) sccn/xccn(cc-conect)"
 fi
@@ -106,7 +107,8 @@ if ! grep -q "$PROFILE_MARKER" "$PROFILE" 2>/dev/null; then
 
 # >>> FreeCloudCode >>>
 # Login shell（SSH 等）需手动 source .bashrc
-if [ -f "$HOME/.bashrc" ]; then
+# 只在 .bashrc 尚未加载时才 source，避免默认 .profile 已 source 导致的重复
+if [ -f "$HOME/.bashrc" ] && [ -z "$_FCC_HOME" ]; then
     . "$HOME/.bashrc"
 fi
 # <<< FreeCloudCode <<<

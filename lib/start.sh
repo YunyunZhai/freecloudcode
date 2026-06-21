@@ -75,9 +75,13 @@ start_cloudcli() {
 start_services() {
     start_tailscale
 
-    # Tailscale IP 在 start_tailscale 之后获取
+    # 等待 Tailscale 获取到 IP（最多等 10 秒）
     local ts_ip
-    ts_ip=$(tailscale_ip)
+    for i in $(seq 1 20); do
+        ts_ip=$(tailscale_ip)
+        [ -n "$ts_ip" ] && break
+        sleep 0.5
+    done
 
     start_omniroute "${ts_ip:-localhost}"
     start_cloudcli "${ts_ip:-localhost}"
