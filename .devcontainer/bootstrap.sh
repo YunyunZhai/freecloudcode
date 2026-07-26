@@ -75,6 +75,16 @@ sccn() { tmux_start cc-connect cc-connect ~/.cc-connect/logs/cc-connect.log && e
 xccn() { tmux_stop cc-connect cc-connect; echo "✓ cc-connect 已停止"; }
 sbp() { tmux_start bridge ccpocket-bridge ~/.freecloudcode/logs/bridge.log && echo "✓ Bridge 已启动"; }
 xbp() { tmux_stop bridge ccpocket-bridge; echo "✓ Bridge 已停止"; }
+saa() {
+    if docker ps --format '{{.Names}}' 2>/dev/null | grep -q '^agents-anywhere-server$'; then echo "⚠ Agents-Anywhere Server 已在运行"; return; fi
+    docker rm -f agents-anywhere-server >/dev/null 2>&1
+    docker run -d --name agents-anywhere-server -p 5174:8000 -v agents-anywhere-data:/data -e AGENT_SERVER_SECRET=liuxu-1989 agents-anywhere-server:latest >/dev/null 2>&1
+    sleep 3
+    if docker ps --format '{{.Names}}' 2>/dev/null | grep -q '^agents-anywhere-server$'; then echo "✓ Agents-Anywhere Server 已启动"; else echo "⚠ 启动失败"; fi
+}
+xaa() { docker stop agents-anywhere-server >/dev/null 2>&1 && echo "✓ Agents-Anywhere Server 已停止" || echo "⚠ 未运行"; }
+saac() { tmux_start agents-anywhere-connector "cd '$HOME/Agents-Anywhere/connector' && bash start-cli.sh" ~/.agents-anywhere/logs/connector.log && echo "✓ Agents-Anywhere Connector 已启动"; }
+xaac() { tmux_stop agents-anywhere-connector agents-anywhere-connector; echo "✓ Agents-Anywhere Connector 已停止"; }
 son() {
     if omniroute doctor --no-liveness >/dev/null 2>&1; then echo "⚠ OmniRoute 已在运行"; return; fi
     omniroute serve --daemon > ~/.freecloudcode/logs/omniroute.log 2>&1
@@ -94,7 +104,8 @@ xor() {
 if [[ $- == *i* ]] && [ -z "$_FCC_HINTS_PRINTED" ]; then
     export _FCC_HINTS_PRINTED=1
     echo "📌 cc(claude) codex opencode oc(omniroute) ccli(cloudcli) pocket(bridge) cr(重连) fcc(状态)"
-    echo "   scc/xcc(CloudCLI) sbp/xbp(Bridge) son/xor(OmniRoute) sccn/xccn(cc-conect)"
+    echo "   scc/xcc(CloudCLI) sbp/xbp(Bridge) son/xor(OmniRoute) sccn/xccn(cc-connect)"
+    echo "   saa/xaa(AA-Server) saac/xaac(AA-Connector)"
 fi
 
 # <<< FreeCloudCode <<<

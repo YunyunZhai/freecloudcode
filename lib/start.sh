@@ -106,7 +106,57 @@ start_services() {
     done
 
     start_omniroute "${ts_ip:-localhost}"
+    start_agentsanywhere
     # CloudCLI 和 cc-connect 不再自动启动，需要时手动运行: scc / sccn
+}
+
+# 启动 Agents-Anywhere（server + connector）
+start_agentsanywhere() {
+    local host="${1:-localhost}"
+
+    # --- Server（Docker）---
+    if ! check_command docker; then
+        record "AA-Server" "skip" "" "Docker 未安装"
+    else
+        if docker ps --format '{{.Names}}' 2>/dev/null | grep -q '^agents-anywhere-server$'; then
+            record "AA-Server" "ok" "" "http://${host}:5174"
+        else
+            docker rm -f agents-anywhere-server >/dev/null 2>&1
+            docker run -d \
+                --name agents-anywhere-server \
+                -p 5174:8000 \
+                -v agents-anywhere-data:/data \
+                -e AGENT_SERVER_SECRET=liuxu-1989 \
+                agents-anywhere-server:latest >/dev/null 2>&1
+            sleep 3
+            if docker ps --format '{{.Names}}' 2>/dev/null | grep -q '^agents-anywhere-server$'; then
+                record "AA-Server" "ok" "" "http://${host}:5174"
+            else
+                record "AA-Server" "fail" "" "启动失败"
+            fi
+        fi
+    fi
+
+    # --- Connector（tmux）---
+    local connector_dir="$HOME/Agents-Anywhere/connector"
+    if [ ! -f "$connector_dir/start-cli.sh" ]; then
+        record "AA-Connector" "skip" "" "start-cli.sh 未找到"
+        return
+    fi
+
+    if is_service_running agents-anywhere-connector agents-anywhere-connector; then
+        record "AA-Connector" "ok" "" "已运行"
+        return
+    fi
+
+    local log_dir="$HOME/.agents-anywhere/logs"
+    ensure_dir "$log_dir"
+    tmux_start "agents-anywhere-connector" "cd '$connector_dir' && bash start-cli.sh" "$log_dir/connector.log"
+    if is_service_running agents-anywhere-connector agents-anywhere-connector; then
+        record "AA-Connector" "ok" "" "已启动"
+    else
+        record "AA-Connector" "fail" "$log_dir/connector.log" "启动失败"
+    fi
 }
 
 # 生成状态报告

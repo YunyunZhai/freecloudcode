@@ -31,6 +31,8 @@ Written to `~/.bashrc` by `setup.sh` — available in every terminal:
 |---------|--------|
 | `scc` — start CloudCLI | `xcc` — stop |
 | `sccn` — start cc-connect | `xccn` — stop |
+| `saa` — start AA-Server | `xaa` — stop |
+| `saac` — start AA-Connector | `xaac` — stop |
 | `sbp` — start Bridge | `xbp` — stop |
 
 ### Installed Aliases (in ~/.bashrc)
