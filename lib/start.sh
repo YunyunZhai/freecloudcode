@@ -106,8 +106,7 @@ start_services() {
     done
 
     start_omniroute "${ts_ip:-localhost}"
-    start_cloudcli "${ts_ip:-localhost}"
-    start_ccconnect
+    # CloudCLI 和 cc-connect 不再自动启动，需要时手动运行: scc / sccn
 }
 
 # 生成状态报告

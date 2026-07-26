@@ -14,7 +14,7 @@ The project is a devcontainer-only setup — no application code, just the envir
   - `onCreateCommand` → `setup.sh` (first-time install only)
   - `postStartCommand` → `start.sh` (every startup)
 - **`.devcontainer/setup.sh`** — One-time setup (runs on first Codespace creation). Installs system deps, Tailscale, Claude Code, npm tools, and writes aliases + service management functions to `~/.bashrc`.
-- **`.devcontainer/start.sh`** — Every-boot startup (runs on every restart). Starts `tailscaled`, connects Tailscale network, launches OmniRoute (daemon mode) and CloudCLI (tmux session).
+- **`.devcontainer/start.sh`** — Every-boot startup (runs on every restart). Starts `tailscaled`, connects Tailscale network, launches OmniRoute (daemon mode)。CloudCLI 和 cc-connect 需手动启动 (`scc` / `sccn`)。
 
 ### Why Two Scripts?
 
@@ -30,6 +30,7 @@ Written to `~/.bashrc` by `setup.sh` — available in every terminal:
 | Command | Action |
 |---------|--------|
 | `scc` — start CloudCLI | `xcc` — stop |
+| `sccn` — start cc-connect | `xccn` — stop |
 | `sbp` — start Bridge | `xbp` — stop |
 
 ### Installed Aliases (in ~/.bashrc)
@@ -47,7 +48,7 @@ cr → reconnect Claude session
 
 - **Edit which tools get installed** — update the `NPM_PACKAGES` array in `setup.sh`
 - **Add a new bash alias** — add to the `.bashrc` block in `setup.sh`
-- **Add a new auto-started service** — add a `_tmux_run` call in `start.sh`
+- **Add a new auto-started service** — add a `tmux_start` call in `start.sh`
 - **Change the devcontainer base** — edit `devcontainer.json`
 
 ## Key Details
