@@ -42,10 +42,12 @@ Written to `~/.bashrc` by `setup.sh` — available in every terminal:
 ```
 cc → claude
 codex → codex
-oc → omniroute
+oc → opencode
+or → omniroute
 ccli → cloudcli
 pocket → ccpocket-bridge
 cr → reconnect Claude session
+fcc → show service status
 ```
 
 ## Common Tasks

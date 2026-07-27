@@ -66,7 +66,8 @@ fi
 # ===== 别名 =====
 alias cc='claude'
 alias codex='codex'
-alias oc='omniroute'
+alias oc='opencode'
+alias or='omniroute'
 alias ccli='cloudcli'
 alias pocket='ccpocket-bridge'
 alias cr='CLAUDE_CODE_ENTRYPOINT=sdk-cli claude -r'
@@ -110,7 +111,7 @@ xor() {
 # ===== 状态提示（仅交互式终端，只显示一次） =====
 if [[ $- == *i* ]] && [ -z "$_FCC_HINTS_PRINTED" ]; then
     export _FCC_HINTS_PRINTED=1
-    echo "📌 cc(claude) codex opencode oc(omniroute) ccli(cloudcli) pocket(bridge) cr(重连) fcc(状态)"
+    echo "📌 cc(claude) codex oc(opencode) or(omniroute) ccli(cloudcli) pocket(bridge) cr(重连) fcc(状态)"
     echo "   scc/xcc(CloudCLI) sbp/xbp(Bridge) sor/xor(OmniRoute) sccn/xccn(cc-connect)"
     echo "   saa/xaa(AA-Server) saac/xaac(AA-Connector)"
 fi
