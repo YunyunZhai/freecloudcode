@@ -18,7 +18,7 @@ if grep -q "$MARKER" "$BASHRC" 2>/dev/null; then
         sed -i "s/^alias oc='omniroute'/alias oc='opencode'\nalias or='omniroute'/" "$BASHRC"
     fi
     # 升级：替换整个 FreeCloudCode block（旧版缺少 saa/xaa 等函数）
-    if ! grep -q 'sor()' "$BASHRC" 2>/dev/null; then
+    if ! grep -q 'saa()' "$BASHRC" 2>/dev/null; then
         sed -i '/^# >>> FreeCloudCode >>>$/,/^# <<< FreeCloudCode <<<$/d' "$BASHRC"
         NEED_REWRITE=1
     fi
