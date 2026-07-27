@@ -13,6 +13,10 @@ if grep -q "$MARKER" "$BASHRC" 2>/dev/null; then
     if grep -q 'son/xor\|cc-conect' "$BASHRC" 2>/dev/null; then
         sed -i 's/son\/xor/sor\/xor/g; s/cc-conect/cc-connect/g' "$BASHRC"
     fi
+    # 修复：旧版 alias oc='omniroute' → oc='opencode' + or='omniroute'
+    if grep -q "alias oc='omniroute'" "$BASHRC" 2>/dev/null && ! grep -q "alias or=" "$BASHRC" 2>/dev/null; then
+        sed -i "s/^alias oc='omniroute'/alias oc='opencode'\nalias or='omniroute'/" "$BASHRC"
+    fi
     # 升级：替换整个 FreeCloudCode block（旧版缺少 saa/xaa 等函数）
     if ! grep -q 'sor()' "$BASHRC" 2>/dev/null; then
         sed -i '/^# >>> FreeCloudCode >>>$/,/^# <<< FreeCloudCode <<<$/d' "$BASHRC"
