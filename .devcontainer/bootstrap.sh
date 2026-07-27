@@ -85,7 +85,7 @@ saa() {
 xaa() { docker stop agents-anywhere-server >/dev/null 2>&1 && echo "✓ Agents-Anywhere Server 已停止" || echo "⚠ 未运行"; }
 saac() { tmux_start agents-anywhere-connector "cd '$HOME/Agents-Anywhere/connector' && bash start-cli.sh" ~/.agents-anywhere/logs/connector.log && echo "✓ Agents-Anywhere Connector 已启动"; }
 xaac() { tmux_stop agents-anywhere-connector agents-anywhere-connector; echo "✓ Agents-Anywhere Connector 已停止"; }
-son() {
+sor() {
     if omniroute doctor --no-liveness >/dev/null 2>&1; then echo "⚠ OmniRoute 已在运行"; return; fi
     omniroute serve --daemon > ~/.freecloudcode/logs/omniroute.log 2>&1
     sleep 3
@@ -104,7 +104,7 @@ xor() {
 if [[ $- == *i* ]] && [ -z "$_FCC_HINTS_PRINTED" ]; then
     export _FCC_HINTS_PRINTED=1
     echo "📌 cc(claude) codex opencode oc(omniroute) ccli(cloudcli) pocket(bridge) cr(重连) fcc(状态)"
-    echo "   scc/xcc(CloudCLI) sbp/xbp(Bridge) son/xor(OmniRoute) sccn/xccn(cc-connect)"
+    echo "   scc/xcc(CloudCLI) sbp/xbp(Bridge) sor/xor(OmniRoute) sccn/xccn(cc-connect)"
     echo "   saa/xaa(AA-Server) saac/xaac(AA-Connector)"
 fi
 

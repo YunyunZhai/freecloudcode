@@ -31,9 +31,11 @@ Written to `~/.bashrc` by `setup.sh` — available in every terminal:
 |---------|--------|
 | `scc` — start CloudCLI | `xcc` — stop |
 | `sccn` — start cc-connect | `xccn` — stop |
+| `sor` — start OmniRoute | `xor` — stop |
 | `saa` — start AA-Server | `xaa` — stop |
 | `saac` — start AA-Connector | `xaac` — stop |
 | `sbp` — start Bridge | `xbp` — stop |
+| `fcc` — show service status | |
 
 ### Installed Aliases (in ~/.bashrc)
 
@@ -48,7 +50,7 @@ cr → reconnect Claude session
 
 ## Common Tasks
 
-- **Edit which tools get installed** — update the `NPM_PACKAGES` array in `setup.sh`
+- **Edit which tools get installed** — update the `NPM_PACKAGES` array in `lib/utils.sh`
 - **Add a new bash alias** — add to the `.bashrc` block in `setup.sh`
 - **Add a new auto-started service** — add a `tmux_start` call in `start.sh`
 - **Change the devcontainer base** — edit `devcontainer.json`
