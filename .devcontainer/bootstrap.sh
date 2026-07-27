@@ -6,13 +6,20 @@ BASHRC="$HOME/.bashrc"
 PROFILE="$HOME/.profile"
 MARKER="# >>> FreeCloudCode >>>"
 
-# 已有则检查是否缺少关键行（旧版可能缺少 source utils.sh）
+# 已有则检查是否需要升级（旧版可能缺少新函数或有拼写错误）
+NEED_REWRITE=0
 if grep -q "$MARKER" "$BASHRC" 2>/dev/null; then
-    # 修复：旧版 .bashrc 可能缺少 source utils.sh，导致 tmux_start/tmux_stop 不可用
-    if ! grep -q 'source.*utils\.sh' "$BASHRC" 2>/dev/null; then
-        sed -i '/^# ===== 服务管理 =====$/i\# 服务管理函数依赖 utils.sh 中的 tmux_start/tmux_stop\nsource "$_FCC_HOME/lib/utils.sh"\n' "$BASHRC"
+    # 修复：旧版 son/xor → sor/xor，cc-conect → cc-connect
+    if grep -q 'son/xor\|cc-conect' "$BASHRC" 2>/dev/null; then
+        sed -i 's/son\/xor/sor\/xor/g; s/cc-conect/cc-connect/g' "$BASHRC"
     fi
-    exit 0
+    # 升级：替换整个 FreeCloudCode block（旧版缺少 saa/xaa 等函数）
+    if ! grep -q 'sor()' "$BASHRC" 2>/dev/null; then
+        sed -i '/^# >>> FreeCloudCode >>>$/,/^# <<< FreeCloudCode <<<$/d' "$BASHRC"
+        NEED_REWRITE=1
+    fi
+    # 无升级需求则退出
+    [ "$NEED_REWRITE" -eq 0 ] && exit 0
 fi
 
 # ===== 创建 ~/freecloudcode → /workspaces/freecloudcode 符号链接 =====
