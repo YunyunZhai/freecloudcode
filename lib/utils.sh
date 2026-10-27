@@ -159,6 +159,12 @@ query_omniroute() {
 query_cloudcli() {
     local addr="${1:-localhost}"
 
+    # CloudCLI 默认不安装，未安装时显示 skip 而非 fail
+    if ! check_command cloudcli; then
+        echo "skip|CloudCLI|未安装"
+        return
+    fi
+
     if http_check "http://${addr}:3001" 2 || is_service_running cloudcli cloudcli; then
         echo "ok|CloudCLI|http://${addr}:3001"
     else
@@ -170,11 +176,10 @@ query_cloudcli() {
 # 格式: "包名" 或 "包名:命令名"
 NPM_PACKAGES=(
     "omniroute"
-    "@cloudcli-ai/cloudcli"
     "@openai/codex"
-    "@ccpocket/bridge:ccpocket-bridge"
-    "cc-connect"
-    "@tawandotorg/claude-sync"
+    # Orca Server 非 npm 包，由 install_orca() 从 GitHub Releases 安装
+    # CloudCLI (@cloudcli-ai/cloudcli)、CCPocket (@ccpocket/bridge)、cc-connect、claude-sync 默认不安装
+    # 需要时手动: npm install -g @cloudcli-ai/cloudcli @ccpocket/bridge cc-connect @tawandotorg/claude-sync
 )
 
 # npm_bin_name PKG_SPEC — 从包规格中提取命令名

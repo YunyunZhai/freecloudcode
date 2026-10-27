@@ -72,8 +72,8 @@ alias cc='claude'
 alias codex='codex'
 alias oc='opencode'
 alias or='omniroute'
-alias ccli='cloudcli'
-alias pocket='ccpocket-bridge'
+# alias ccli='cloudcli'          # CloudCLI 默认不安装，需要时取消注释并手动安装
+# alias pocket='ccpocket-bridge' # CCPocket 默认不安装，需要时取消注释并手动安装
 alias cr='CLAUDE_CODE_ENTRYPOINT=sdk-cli claude -r'
 alias fcc='bash -c "source ~/freecloudcode/lib/utils.sh; source ~/freecloudcode/lib/status.sh; show_status"'
 
@@ -81,12 +81,26 @@ alias fcc='bash -c "source ~/freecloudcode/lib/utils.sh; source ~/freecloudcode/
 source "$_FCC_HOME/lib/utils.sh"
 
 # ===== 服务管理 =====
-scc() { tmux_start cloudcli cloudcli ~/.freecloudcode/logs/cloudcli.log && echo "✓ CloudCLI 已启动"; }
-xcc() { tmux_stop cloudcli cloudcli; echo "✓ CloudCLI 已停止"; }
-sccn() { tmux_start cc-connect cc-connect ~/.cc-connect/logs/cc-connect.log && echo "✓ cc-connect 已启动"; }
-xccn() { tmux_stop cc-connect cc-connect; echo "✓ cc-connect 已停止"; }
-sbp() { tmux_start bridge ccpocket-bridge ~/.freecloudcode/logs/bridge.log && echo "✓ Bridge 已启动"; }
-xbp() { tmux_stop bridge ccpocket-bridge; echo "✓ Bridge 已停止"; }
+# CloudCLI 管理（默认不安装，需要时取消注释并手动安装 cloudcli）
+# scc() { tmux_start cloudcli cloudcli ~/.freecloudcode/logs/cloudcli.log && echo "✓ CloudCLI 已启动"; }
+# xcc() { tmux_stop cloudcli cloudcli; echo "✓ CloudCLI 已停止"; }
+# cc-connect 管理（默认不安装，需要时取消注释并手动安装 cc-connect）
+# sccn() { tmux_start cc-connect cc-connect ~/.cc-connect/logs/cc-connect.log && echo "✓ cc-connect 已启动"; }
+# xccn() { tmux_stop cc-connect cc-connect; echo "✓ cc-connect 已停止"; }
+# CCPocket Bridge 管理（默认不安装，需要时取消注释并手动安装 @ccpocket/bridge）
+# sbp() { tmux_start bridge ccpocket-bridge ~/.freecloudcode/logs/bridge.log && echo "✓ Bridge 已启动"; }
+# xbp() { tmux_stop bridge ccpocket-bridge; echo "✓ Bridge 已停止"; }
+# Orca Server（headless，默认安装；命令为 orca-ide，无 DISPLAY 时用 xvfb-run）
+sorca() {
+    if ! check_command orca-ide; then echo "⚠ orca-ide 未安装"; return 1; fi
+    if is_service_running orca "orca-ide serve"; then echo "⚠ Orca Server 已在运行"; return 0; fi
+    local ts_ip; ts_ip=$(tailscale_ip)
+    local addr="${ts_ip:-localhost}"
+    local runner="orca-ide"
+    [ -z "$DISPLAY" ] && runner="xvfb-run --auto-servernum $runner"
+    tmux_start orca "LIBGL_ALWAYS_SOFTWARE=1 $runner serve --port 6768 --pairing-address $addr" ~/.freecloudcode/logs/orca.log && echo "✓ Orca Server 已启动 (http://${addr}:6768)"
+}
+xorca() { tmux_stop orca "orca-ide serve"; echo "✓ Orca Server 已停止"; }
 saa() {
     if docker ps --format '{{.Names}}' 2>/dev/null | grep -q '^agents-anywhere-server$'; then echo "⚠ Agents-Anywhere Server 已在运行"; return; fi
     docker rm -f agents-anywhere-server >/dev/null 2>&1
@@ -115,9 +129,8 @@ xor() {
 # ===== 状态提示（仅交互式终端，只显示一次） =====
 if [[ $- == *i* ]] && [ -z "$_FCC_HINTS_PRINTED" ]; then
     export _FCC_HINTS_PRINTED=1
-    echo "📌 cc(claude) codex oc(opencode) or(omniroute) ccli(cloudcli) pocket(bridge) cr(重连) fcc(状态)"
-    echo "   scc/xcc(CloudCLI) sbp/xbp(Bridge) sor/xor(OmniRoute) sccn/xccn(cc-connect)"
-    echo "   saa/xaa(AA-Server) saac/xaac(AA-Connector)"
+    echo "📌 cc(claude) codex oc(opencode) or(omniroute) orca-ide(Orca) cr(重连) fcc(状态)"
+    echo "   sor/xor(OmniRoute) sorca/xorca(Orca Server) saa/xaa(AA-Server) saac/xaac(AA-Connector)"
 fi
 
 # <<< FreeCloudCode <<<

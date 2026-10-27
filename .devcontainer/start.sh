@@ -61,32 +61,12 @@ if [ ! -f "$CONFIG_HINT_SHOWN" ]; then
         display_status_line "$status" "OmniRoute" "$hint"
     fi
 
-    # CloudCLI
-    result=$(query_cloudcli "${ts_ip:-localhost}")
-    IFS='|' read -r status _ hint <<< "$result"
-    if [ "$status" = "ok" ]; then
-        display_status_line "ok" "CloudCLI" "$hint"
-    else
-        display_status_line "$status" "CloudCLI" "$hint"
-    fi
-
-    # claude-sync
-    if check_command claude-sync; then
-        if claude-sync status -q 2>/dev/null; then
-            display_status_line "ok" "claude-sync" "已配置"
-            echo "     同步方案: 开启终端自动同步 + claude stop 时同步" >&2
-        else
-            display_status_line "skip" "claude-sync" "未配置"
-            echo "     终端运行: claude-sync init" >&2
-        fi
-    fi
-
     # 安装检查
     echo "" >&2
     echo "=========================================" >&2
     echo " 📋 安装检查" >&2
     echo "=========================================" >&2
-    for cmd in tailscale claude opencode omniroute cloudcli codex cc-connect ccpocket-bridge claude-sync; do
+    for cmd in tailscale claude opencode omniroute codex orca-ide; do
         if check_command "$cmd"; then
             display_status_line "ok" "$cmd" "✓"
         else
@@ -97,8 +77,8 @@ if [ ! -f "$CONFIG_HINT_SHOWN" ]; then
     # 常用命令
     echo "" >&2
     echo "📌 常用命令:" >&2
-    echo "   cc(claude) codex oc(opencode) or(omniroute) ccli(cloudcli) pocket(bridge)" >&2
-    echo "   scc/xcc(CloudCLI) sbp/xbp(Bridge) sor/xor(OmniRoute) sccn/xccn(cc-connect)" >&2
+    echo "   cc(claude) codex oc(opencode) or(omniroute) orca-ide(Orca)" >&2
+    echo "   sor/xor(OmniRoute) sorca/xorca(Orca Server)" >&2
     echo "   saa/xaa(AA-Server) saac/xaac(AA-Connector) fcc(状态)" >&2
 
     echo "" >&2

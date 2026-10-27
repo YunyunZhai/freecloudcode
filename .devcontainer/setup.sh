@@ -76,21 +76,14 @@ else
     display_status_line "$status" "OmniRoute" "$hint"
 fi
 
-# claude-sync
-if check_command claude-sync; then
-    if claude-sync status -q 2>/dev/null; then
-        display_status_line "ok" "claude-sync" "已配置"
-    else
-        display_status_line "skip" "claude-sync" "未配置（需运行: claude-sync init）"
-    fi
-fi
+# claude-sync 默认不安装，安装检查见下方 NPM_PACKAGES 循环
 
 # 安装检查
 echo ""
 echo "========================================="
 echo " 📋 安装检查"
 echo "========================================="
-for cmd in tailscale claude opencode; do
+for cmd in tailscale claude opencode orca-ide; do
     if check_command "$cmd"; then
         display_status_line "ok" "$cmd" "✓"
     else

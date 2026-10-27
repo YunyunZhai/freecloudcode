@@ -11,7 +11,7 @@ install_system_deps() {
         return 1
     fi
 
-    if sudo apt-get install -y -qq tmux curl wget jq >/dev/null 2>&1; then
+    if sudo apt-get install -y -qq tmux curl wget jq xvfb >/dev/null 2>&1; then
         log_success "系统依赖已就绪"
         return 0
     else
@@ -96,6 +96,51 @@ install_opencode() {
     fi
 }
 
+# 安装 Orca Server（headless，github.com/stablyai/orca）
+# 官方无 npm 包 / 容器镜像，服务端安装 Linux 原生包 orca-ide（.deb，命令名为 orca-ide）
+install_orca() {
+    if check_command orca-ide; then
+        log_success "Orca Server 已存在（orca-ide）"
+        return 0
+    fi
+
+    local arch_suffix="amd64"
+    case "$(uname -m)" in
+        aarch64|arm64) arch_suffix="arm64" ;;
+    esac
+
+    # 通过 GitHub API 获取最新 release 中对应架构的 .deb 资产地址
+    local release_json asset_url
+    release_json=$(curl -fsSL --retry 3 https://api.github.com/repos/stablyai/orca/releases/latest 2>/dev/null)
+    asset_url=$(echo "$release_json" | jq -r --arg suffix "_${arch_suffix}.deb" \
+        '.assets[] | select(.name | endswith($suffix)) | .browser_download_url' | head -1)
+
+    if [ -z "$asset_url" ]; then
+        log_warn "Orca Server 安装失败（未找到 ${arch_suffix} 的 .deb 资产）"
+        return 1
+    fi
+
+    local orca_home="$HOME/.orca"
+    ensure_dir "$orca_home"
+    local deb_file="$orca_home/orca-ide.deb"
+
+    if curl -fL --retry 3 -o "$deb_file" "$asset_url" 2>/dev/null; then
+        if ! sudo dpkg -i "$deb_file" >/dev/null 2>&1; then
+            # 依赖缺失时用 apt -f 修复后重试
+            sudo apt-get install -y -qq -f >/dev/null 2>&1
+            sudo dpkg -i "$deb_file" >/dev/null 2>&1
+        fi
+        rm -f "$deb_file"
+        if check_command orca-ide; then
+            log_success "Orca Server 已安装（orca-ide）"
+            return 0
+        fi
+    fi
+    rm -f "$deb_file"
+    log_warn "Orca Server 安装失败"
+    return 1
+}
+
 # 安装 npm 全局工具
 install_npm_packages() {
     local failed=0
@@ -124,7 +169,7 @@ create_directories() {
     ensure_dir "$HOME/.freecloudcode/config"
 
     # 初始化日志文件
-    for logfile in claude_sync tailscale omniroute cloudcli bridge; do
+    for logfile in tailscale omniroute orca; do
         touch "$HOME/.freecloudcode/logs/${logfile}.log"
         chmod 644 "$HOME/.freecloudcode/logs/${logfile}.log"
     done
@@ -147,6 +192,7 @@ run_setup() {
         auth_tailscale || { echo $(( $(cat "$fail_count_file") + 1 )) > "$fail_count_file"; }
         install_claude || { echo $(( $(cat "$fail_count_file") + 1 )) > "$fail_count_file"; }
         install_opencode || { echo $(( $(cat "$fail_count_file") + 1 )) > "$fail_count_file"; }
+        install_orca || { echo $(( $(cat "$fail_count_file") + 1 )) > "$fail_count_file"; }
         install_npm_packages || { echo $(( $(cat "$fail_count_file") + 1 )) > "$fail_count_file"; }
         create_directories
 
@@ -160,6 +206,12 @@ run_setup() {
 configure_claude_code_hooks() {
     local settings="$HOME/.claude/settings.json"
     ensure_dir "$HOME/.claude"
+
+    # claude-sync 默认不安装，未安装时跳过 hook 配置（hook 依赖 claude-sync）
+    if ! check_command claude-sync; then
+        log_warn "claude-sync 未安装，跳过 Claude Code hooks 配置"
+        return 0
+    fi
 
     if [ -f "$settings" ]; then
         if ! jq -e '.hooks.SessionStart' "$settings" >/dev/null 2>&1; then

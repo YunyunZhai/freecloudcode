@@ -6,13 +6,5 @@
       "version": "lts"
     }
   },
-  "customizations": {
-    "vscode": {
-      "extensions": [
-        "ms-vscode.vscode-typescript-next",
-        "dbaeumer.vscode-eslint"
-      ]
-    }
-  },
   "remoteUser": "codespace"
 }

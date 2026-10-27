@@ -8,10 +8,19 @@
 |------|------|------|
 | Claude Code | `claude` | `cc` |
 | OpenAI Codex | `codex` | `codex` |
-| OmniRoute | `omniroute` | `oc` |
+| OpenCode | `opencode` | `oc` |
+| OmniRoute | `omniroute` | `or` |
+| Orca Server | `orca-ide` | `sorca` / `xorca` |
 | Tailscale | `tailscale` | — |
-| CloudCLI | `cloudcli` | `ccli` |
-| CCPocket | `ccpocket` | `pocket` |
+
+### 可选安装（默认不安装）
+
+| 工具 | 命令 | 安装方式 |
+|------|------|---------|
+| CloudCLI | `cloudcli` / `ccli` | `npm install -g @cloudcli-ai/cloudcli` |
+| CCPocket | `ccpocket` / `pocket` | `npm install -g @ccpocket/bridge` |
+| cc-connect | `cc-connect` | `npm install -g cc-connect` |
+| claude-sync | `claude-sync` | `npm install -g @tawandotorg/claude-sync` |
 
 ## 快速开始
 
@@ -21,12 +30,13 @@
 
 ## 服务管理
 
-每次重启后，**OmniRoute**（daemon）和 **CloudCLI**（tmux）自动启动。管理命令：
+每次重启后自动启动 Tailscale、**OmniRoute**（daemon）等服务。管理命令：
 
 ```
-scc  — 启动 CloudCLI    xcc — 停止
-sbp  — 启动 Bridge      xbp — 停止
-cr   — 重连 Claude 会话
+sor   — 启动 OmniRoute      xor   — 停止
+sorca — 启动 Orca Server    xorca — 停止
+saa   — 启动 AA-Server      xaa   — 停止
+cr    — 重连 Claude 会话
 ```
 
 ## 架构说明
