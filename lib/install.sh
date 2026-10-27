@@ -394,5 +394,54 @@ fi
 PROFILE_BLOCK
     fi
 
+    # zsh 支持：zsh 不读 ~/.bashrc，检测到 ~/.zshrc 时写入相同的配置块
+    if [ -f "$HOME/.zshrc" ]; then
+        local zshrc="$HOME/.zshrc"
+        if grep -q "# >>> FreeCloudCode (zsh) >>>" "$zshrc" 2>/dev/null; then
+            sed -i '/^# >>> FreeCloudCode (zsh) >>>$/,/^# <<< FreeCloudCode (zsh) <<<$/d' "$zshrc"
+        fi
+        cat >> "$zshrc" << 'ZSHRC_BLOCK'
+
+# >>> FreeCloudCode (zsh) >>>
+# zsh 不读 ~/.bashrc，此块为 FreeCloudCode 的 zsh 配置（与 bashrc 块一致）
+export PATH="$PATH:$HOME/.local/bin:$HOME/.opencode/bin:$(npm config get prefix 2>/dev/null)/bin"
+_FCC_HOME="${FCC_HOME:-$HOME/freecloudcode}"
+[ -f "$_FCC_HOME/start.sh" ] && bash "$_FCC_HOME/start.sh" &
+source "$_FCC_HOME/lib/utils.sh"
+alias cc='claude'
+alias codex='codex'
+alias oc='opencode'
+alias or='omniroute'
+alias cr='CLAUDE_CODE_ENTRYPOINT=sdk-cli claude -r'
+alias fcc='bash -c "source ~/freecloudcode/lib/utils.sh; source ~/freecloudcode/lib/status.sh; show_status"'
+sor() {
+    if omniroute doctor --no-liveness >/dev/null 2>&1; then echo "⚠ OmniRoute 已在运行"; return; fi
+    omniroute serve --daemon > ~/.freecloudcode/logs/omniroute.log 2>&1
+    sleep 3
+    if omniroute doctor --no-liveness >/dev/null 2>&1; then echo "✓ OmniRoute 已启动"; else echo "⚠ OmniRoute 启动失败"; fi
+}
+xor() {
+    if omniroute stop 2>/dev/null; then echo "✓ OmniRoute 已停止"; return; fi
+    local pidfile="$HOME/.omniroute/omniroute.pid"
+    if [ -f "$pidfile" ] && kill "$(cat "$pidfile")" 2>/dev/null; then echo "✓ OmniRoute 已停止"; rm -f "$pidfile"; return; fi
+    echo "⚠ OmniRoute 未运行"
+}
+sorca() {
+    if ! check_command orca-ide; then echo "⚠ orca-ide 未安装"; return 1; fi
+    if is_service_running orca "orca-ide serve"; then echo "⚠ Orca Server 已在运行"; return 0; fi
+    local ts_ip; ts_ip=$(tailscale_ip)
+    local addr="${ts_ip:-localhost}"
+    local runner="orca-ide"
+    [ -z "$DISPLAY" ] && runner="xvfb-run --auto-servernum $runner"
+    tmux_start orca "LIBGL_ALWAYS_SOFTWARE=1 $runner serve --port 6768 --pairing-address $addr" ~/.freecloudcode/logs/orca.log && echo "✓ Orca Server 已启动 (http://${addr}:6768)"
+}
+xorca() { tmux_stop orca "orca-ide serve"; echo "✓ Orca Server 已停止"; }
+echo "📌 cc(claude) codex oc(opencode) or(omniroute) orca-ide(Orca) cr(重连) fcc(状态)"
+echo "   sor/xor(OmniRoute) sorca/xorca(Orca Server)"
+# <<< FreeCloudCode (zsh) >>>
+ZSHRC_BLOCK
+        log_success "Shell 配置已写入 ~/.zshrc（zsh）"
+    fi
+
     log_success "Shell 配置已写入 ~/.bashrc（别名 + 服务管理函数）"
 }
