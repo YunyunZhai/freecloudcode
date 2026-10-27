@@ -5,8 +5,10 @@
 # 自动安装默认工具集（Claude Code、OpenCode、Orca Server、OmniRoute、Codex、Tailscale 等）
 # 并写入 shell 配置（别名、服务管理函数）。幂等，可重复运行。
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LIB_DIR="$SCRIPT_DIR/lib"
+# 注意：lib/*.sh 内部也定义了 SCRIPT_DIR（指向各自目录），source 后会覆盖本变量，
+# 因此这里用唯一的 REPO_DIR，避免后续 ln -s 指向错误的 lib/ 目录
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LIB_DIR="$REPO_DIR/lib"
 
 source "$LIB_DIR/utils.sh"
 source "$LIB_DIR/install.sh"
@@ -16,9 +18,9 @@ export PATH="$HOME/.opencode/bin:$PATH:$HOME/.local/bin:$(npm config get prefix 
 
 # ===== 创建 ~/freecloudcode → 仓库目录 符号链接 =====
 LINK="$HOME/freecloudcode"
-if [ -d "$SCRIPT_DIR" ] && [ ! -e "$LINK" ]; then
-    ln -s "$SCRIPT_DIR" "$LINK"
-    echo "✓ 已创建链接 ~/freecloudcode -> $SCRIPT_DIR"
+if [ -d "$REPO_DIR" ] && [ ! -e "$LINK" ]; then
+    ln -s "$REPO_DIR" "$LINK"
+    echo "✓ 已创建链接 ~/freecloudcode -> $REPO_DIR"
 fi
 
 # ===== 幂等检查 =====

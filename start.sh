@@ -2,8 +2,10 @@
 # start.sh — FreeCloudCode 每次打开终端时启动服务
 # 由 install.sh 写入的 ~/.bashrc 调用
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LIB_DIR="$SCRIPT_DIR/lib"
+# 注意：lib/*.sh 内部也定义了 SCRIPT_DIR（指向各自目录），source 后会覆盖本变量，
+# 因此这里用唯一的 REPO_DIR
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LIB_DIR="$REPO_DIR/lib"
 
 source "$LIB_DIR/utils.sh"
 source "$LIB_DIR/start.sh"
