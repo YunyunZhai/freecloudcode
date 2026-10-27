@@ -80,7 +80,14 @@ install_claude() {
 
 # 安装 OpenCode CLI
 install_opencode() {
+    local local_bin="$HOME/.local/bin"
+
     if check_command opencode; then
+        # 旧容器可能只装在 ~/.opencode/bin（默认 PATH 不含该目录），补建软链到 ~/.local/bin
+        if [ ! -e "$local_bin/opencode" ]; then
+            ensure_dir "$local_bin"
+            ln -sf "$HOME/.opencode/bin/opencode" "$local_bin/opencode"
+        fi
         log_success "OpenCode CLI 已存在"
         return 0
     fi
@@ -88,6 +95,10 @@ install_opencode() {
     if curl -fsSL https://opencode.ai/install | bash 2>/dev/null; then
         # 立即更新 PATH，确保后续 check_command 能找到
         export PATH="$HOME/.opencode/bin:$PATH"
+        # opencode 装在非标准目录 ~/.opencode/bin，软链到默认 PATH 已含的 ~/.local/bin，
+        # 避免"claude 能用但 opencode 找不到"（任何未加载 FCC 块的 shell 都受影响）
+        ensure_dir "$local_bin"
+        ln -sf "$HOME/.opencode/bin/opencode" "$local_bin/opencode"
         log_success "OpenCode CLI 已安装"
         return 0
     else
