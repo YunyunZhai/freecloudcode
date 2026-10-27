@@ -70,14 +70,17 @@ tailscale_ip() {
     check_command tailscale && tailscale ip -4 2>/dev/null
 }
 
-# tailscale_is_connected — 检查 Tailscale 是否已连接（成功返回 0）
+# tailscale_is_connected — 检查 Tailscale 是否已认证并连接（成功返回 0）
+# 注意：不能只看 `tailscale status` 的退出码——Logged out 状态下 status 仍返回 0，
+# 必须检查输出内容（"Logged out."/"NeedsLogin" 等）才能区分"已连接"与"未认证"
 tailscale_is_connected() {
     check_command tailscale || return 1
-    # 方法1: tailscale status
-    sudo tailscale status >/dev/null 2>&1 && return 0
-    # 方法2: 网络接口检测（非交互式环境可能 status 失败）
-    ip link show tailscale0 >/dev/null 2>&1 && return 0
-    return 1
+    local out
+    out=$(sudo tailscale status 2>/dev/null)
+    case "$out" in
+        ""|*"Logged out."*|*"NeedsLogin"*|*"No state"*|*"stopped"*) return 1 ;;
+    esac
+    return 0
 }
 
 # tailscale_is_daemon_running — tailscaled 守护进程是否运行
