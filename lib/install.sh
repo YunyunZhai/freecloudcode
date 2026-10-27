@@ -152,8 +152,11 @@ install_npm_packages() {
 
         if check_command "$bin_name" 2>/dev/null; then
             log_success "$pkg_name 已存在"
-        elif npm install -g "$pkg_name" 2>&1 | tail -1 >/dev/null; then
+        elif npm install -g "$pkg_name" >/dev/null 2>&1; then
             log_success "$pkg_name 已安装"
+        elif sudo npm install -g "$pkg_name" >/dev/null 2>&1; then
+            # 普通用户全局前缀不可写时（空白容器常见）用 sudo 重试
+            log_success "$pkg_name 已安装（sudo）"
         else
             log_warn "$pkg_name 安装失败"
             failed=1
@@ -161,6 +164,39 @@ install_npm_packages() {
     done
 
     return $failed
+}
+
+# 安装 Node.js（空白容器可能没有 node/npm；npm 工具需要 Node 18+）
+install_node() {
+    if check_command node && check_command npm; then
+        local major
+        major=$(node -v 2>/dev/null | sed 's/^v//; s/\..*//')
+        if [ "${major:-0}" -ge 18 ]; then
+            log_success "Node.js 已存在 ($(node -v))"
+            return 0
+        fi
+        log_warn "Node.js 版本过低 ($(node -v))，尝试升级"
+    fi
+
+    if sudo apt-get install -y -qq nodejs npm >/dev/null 2>&1; then
+        major=$(node -v 2>/dev/null | sed 's/^v//; s/\..*//')
+        if [ "${major:-0}" -ge 18 ]; then
+            log_success "Node.js 已安装 ($(node -v))"
+            return 0
+        fi
+    fi
+
+    # apt 版本过旧时使用 NodeSource LTS（支持 amd64/arm64）
+    if curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - >/dev/null 2>&1; then
+        sudo apt-get install -y -qq nodejs >/dev/null 2>&1
+        if check_command node; then
+            log_success "Node.js 22 已安装 ($(node -v))"
+            return 0
+        fi
+    fi
+
+    log_warn "Node.js 安装失败"
+    return 1
 }
 
 # 创建目录结构
@@ -188,6 +224,7 @@ run_setup() {
     # 输出同时显示在终端和写入日志文件
     {
         install_system_deps || { echo $(( $(cat "$fail_count_file") + 1 )) > "$fail_count_file"; }
+        install_node || { echo $(( $(cat "$fail_count_file") + 1 )) > "$fail_count_file"; }
         install_tailscale || { echo $(( $(cat "$fail_count_file") + 1 )) > "$fail_count_file"; }
         auth_tailscale || { echo $(( $(cat "$fail_count_file") + 1 )) > "$fail_count_file"; }
         install_claude || { echo $(( $(cat "$fail_count_file") + 1 )) > "$fail_count_file"; }
@@ -269,4 +306,93 @@ configure_claude_code_hooks() {
 EOF
         log_success "Claude Code hooks 已配置（SessionStart + Stop + SessionEnd）"
     fi
+}
+
+# 写入 shell 配置（别名 / 服务管理函数 / 提示）到 ~/.bashrc 与 ~/.profile
+# 会先移除旧版 FreeCloudCode 块（含历史遗留的 ccli/pocket/scc/sccn/sbp 等），保证干净
+write_shell_config() {
+    local bashrc="$HOME/.bashrc"
+    local profile="$HOME/.profile"
+    local block_marker="# >>> FreeCloudCode >>>"
+
+    if grep -q "$block_marker" "$bashrc" 2>/dev/null; then
+        sed -i '/^# >>> FreeCloudCode >>>$/,/^# <<< FreeCloudCode <<<$/d' "$bashrc"
+    fi
+
+    cat >> "$bashrc" << 'BASHRC_BLOCK'
+
+# >>> FreeCloudCode >>>
+_FCC_HOME="${FCC_HOME:-$HOME/freecloudcode}"
+
+# 服务启动（每次打开终端只执行一次）
+if [ -z "$_FCC_STARTUP_DONE" ]; then
+    export _FCC_STARTUP_DONE=1
+    if [ -f "$_FCC_HOME/start.sh" ]; then
+        bash "$_FCC_HOME/start.sh"
+    fi
+fi
+
+# ===== 别名 =====
+alias cc='claude'
+alias codex='codex'
+alias oc='opencode'
+alias or='omniroute'
+alias cr='CLAUDE_CODE_ENTRYPOINT=sdk-cli claude -r'
+alias fcc='bash -c "source ~/freecloudcode/lib/utils.sh; source ~/freecloudcode/lib/status.sh; show_status"'
+
+# 服务管理函数依赖 utils.sh 中的 tmux_start/tmux_stop
+source "$_FCC_HOME/lib/utils.sh"
+
+# ===== 服务管理 =====
+sor() {
+    if omniroute doctor --no-liveness >/dev/null 2>&1; then echo "⚠ OmniRoute 已在运行"; return; fi
+    omniroute serve --daemon > ~/.freecloudcode/logs/omniroute.log 2>&1
+    sleep 3
+    if omniroute doctor --no-liveness >/dev/null 2>&1; then echo "✓ OmniRoute 已启动"; else echo "⚠ OmniRoute 启动失败，日志: ~/.freecloudcode/logs/omniroute.log"; fi
+}
+xor() {
+    if omniroute stop 2>/dev/null; then echo "✓ OmniRoute 已停止"; return; fi
+    local pidfile="$HOME/.omniroute/omniroute.pid"
+    if [ -f "$pidfile" ] && kill "$(cat "$pidfile")" 2>/dev/null; then
+        echo "✓ OmniRoute 已停止"; rm -f "$pidfile"; return
+    fi
+    echo "⚠ OmniRoute 未运行"
+}
+sorca() {
+    if ! check_command orca-ide; then echo "⚠ orca-ide 未安装"; return 1; fi
+    if is_service_running orca "orca-ide serve"; then echo "⚠ Orca Server 已在运行"; return 0; fi
+    local ts_ip; ts_ip=$(tailscale_ip)
+    local addr="${ts_ip:-localhost}"
+    local runner="orca-ide"
+    [ -z "$DISPLAY" ] && runner="xvfb-run --auto-servernum $runner"
+    tmux_start orca "LIBGL_ALWAYS_SOFTWARE=1 $runner serve --port 6768 --pairing-address $addr" ~/.freecloudcode/logs/orca.log && echo "✓ Orca Server 已启动 (http://${addr}:6768)"
+}
+xorca() { tmux_stop orca "orca-ide serve"; echo "✓ Orca Server 已停止"; }
+
+# ===== 状态提示（仅交互式终端，只显示一次） =====
+if [[ $- == *i* ]] && [ -z "$_FCC_HINTS_PRINTED" ]; then
+    export _FCC_HINTS_PRINTED=1
+    echo "📌 cc(claude) codex oc(opencode) or(omniroute) orca-ide(Orca) cr(重连) fcc(状态)"
+    echo "   sor/xor(OmniRoute) sorca/xorca(Orca Server)"
+fi
+
+# <<< FreeCloudCode <<<
+BASHRC_BLOCK
+
+    # .profile（login shell，如 SSH 首次登录）
+    local profile_marker="# >>> FreeCloudCode >>>"
+    if ! grep -q "$profile_marker" "$profile" 2>/dev/null; then
+        cat >> "$profile" << 'PROFILE_BLOCK'
+
+# >>> FreeCloudCode >>>
+# Login shell（SSH 等）需手动 source .bashrc
+# 只在 .bashrc 尚未加载时才 source，避免默认 .profile 已 source 导致的重复
+if [ -f "$HOME/.bashrc" ] && [ -z "$_FCC_HOME" ]; then
+    . "$HOME/.bashrc"
+fi
+# <<< FreeCloudCode <<<
+PROFILE_BLOCK
+    fi
+
+    log_success "Shell 配置已写入 ~/.bashrc（别名 + 服务管理函数）"
 }

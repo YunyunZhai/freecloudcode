@@ -155,23 +155,6 @@ query_omniroute() {
     fi
 }
 
-# query_cloudcli [addr] — 输出 CloudCLI 状态行
-query_cloudcli() {
-    local addr="${1:-localhost}"
-
-    # CloudCLI 默认不安装，未安装时显示 skip 而非 fail
-    if ! check_command cloudcli; then
-        echo "skip|CloudCLI|未安装"
-        return
-    fi
-
-    if http_check "http://${addr}:3001" 2 || is_service_running cloudcli cloudcli; then
-        echo "ok|CloudCLI|http://${addr}:3001"
-    else
-        echo "fail|CloudCLI|http://${addr}:3001"
-    fi
-}
-
 # ===== npm 包管理 =====
 # 格式: "包名" 或 "包名:命令名"
 NPM_PACKAGES=(

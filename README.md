@@ -1,6 +1,6 @@
 # FreeCloudCode
 
-一个预配置的 GitHub Codespace，包含所有你需要的云端开发工具。打开 Codespace，一切就绪。
+一个手动安装套件：在空白容器中一键安装所有云端开发工具。创建容器 → SSH 进入 → 运行一个脚本，全部就绪。
 
 ## 包含工具
 
@@ -24,9 +24,12 @@
 
 ## 快速开始
 
-1. 点击 **Code** → **Codespaces** → **Create codespace on main**
-2. 首次安装约 2 分钟，安装完成后工具自动就绪
-3. 每次打开终端都会自动启动服务
+1. 创建空白容器（OCI / WSL / Codespace 等均可）并 SSH 进入
+2. 克隆本仓库: `git clone <仓库地址> && cd freecloudcode`
+3. 运行安装: `bash install.sh`
+4. 重新打开终端，别名与服务管理函数即生效（首次打开会自动启动服务）
+
+安装脚本幂等，可重复运行；已安装的工具会跳过。
 
 ## 服务管理
 
@@ -35,26 +38,26 @@
 ```
 sor   — 启动 OmniRoute      xor   — 停止
 sorca — 启动 Orca Server    xorca — 停止
-saa   — 启动 AA-Server      xaa   — 停止
 cr    — 重连 Claude 会话
 ```
 
 ## 架构说明
 
 ```
+install.sh              # 手动安装入口（SSH 后: bash install.sh）
+start.sh                # 每次打开终端时启动服务（由 ~/.bashrc 调用）
+
 .devcontainer/
-├── devcontainer.json    # Codespace 配置（host 模式，无 Docker）
-├── setup.sh             # 一次性安装（首次创建时由 .bashrc 调用）
-└── start.sh             # 每次启动（每次打开终端由 .bashrc 调用）
+└── devcontainer.json   # 可选：Codespace 基础容器配置（无自动安装脚本）
 
 lib/
-├── utils.sh             # 通用工具函数（日志、检查、目录操作）
-├── install.sh           # 安装函数（系统依赖、工具安装）
-├── start.sh             # 启动函数（服务启动、状态追踪）
-└── status.sh            # 状态检测函数（HTTP 检查、实时状态）
+├── utils.sh            # 通用工具函数（日志、检查、目录操作）
+├── install.sh          # 安装函数（系统依赖、Node、工具安装、shell 配置）
+├── start.sh            # 启动函数（服务启动、状态追踪）
+└── status.sh           # 状态检测函数（HTTP 检查、实时状态）
 
 tests/
-├── test_utils.sh        # 测试框架
+├── test_utils.sh       # 测试框架
 ├── test_utils_functions.sh
 ├── test_install.sh
 ├── test_start.sh
