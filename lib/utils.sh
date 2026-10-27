@@ -177,6 +177,66 @@ npm_bin_name() {
     echo "$bin_name"
 }
 
+# omni_passwd — 重置 OmniRoute 管理密码
+# 生成随机强密码 → 写 ~/.omniroute/.env 的 INITIAL_PASSWORD → 直接更新 DB 中的 bcrypt hash → 重启
+# 说明：OmniRoute 只在"无已保存 hash"时用 INITIAL_PASSWORD 迁移，因此改密需直接更新 DB hash。
+omni_passwd() {
+    local env_file="$HOME/.omniroute/.env"
+    local db="$HOME/.omniroute/storage.sqlite"
+    if [ ! -f "$env_file" ] || [ ! -f "$db" ]; then
+        echo "⚠ 未找到 $env_file 或 storage.sqlite，请先完成安装并启动一次 OmniRoute" >&2
+        return 1
+    fi
+    if ! check_command node; then
+        echo "⚠ node 不可用，无法生成密码 hash" >&2
+        return 1
+    fi
+
+    local pwd omni_pkg bhash
+    pwd=$(tr -dc 'A-HJ-NP-Za-km-z2-9' < /dev/urandom | head -c 24)
+    if [ -z "$pwd" ]; then
+        echo "⚠ 密码生成失败" >&2
+        return 1
+    fi
+
+    # 1) 写入 .env（替换或追加 INITIAL_PASSWORD）
+    if grep -q '^INITIAL_PASSWORD=' "$env_file"; then
+        sed -i "s/^INITIAL_PASSWORD=.*/INITIAL_PASSWORD=$pwd/" "$env_file"
+    else
+        printf '\nINITIAL_PASSWORD=%s\n' "$pwd" >> "$env_file"
+    fi
+    chmod 600 "$env_file"
+
+    # 2) 用 omniroute 自带的 bcryptjs 生成 hash，直接写入 DB
+    omni_pkg="$(npm root -g 2>/dev/null)/omniroute"
+    bhash=$(node -e "const b=require('$omni_pkg/node_modules/bcryptjs'); console.log(b.hashSync(process.argv[1],12))" "$pwd" 2>/dev/null)
+    if [ -z "$bhash" ]; then
+        echo "⚠ 密码 hash 生成失败（omniroute 包或其依赖缺失？）" >&2
+        return 1
+    fi
+    python3 - "$bhash" <<'PY'
+import sqlite3, os, json, sys
+con = sqlite3.connect(os.path.expanduser("~/.omniroute/storage.sqlite"))
+cur = con.cursor()
+cur.execute("DELETE FROM key_value WHERE namespace='settings' AND key='password'")
+cur.execute("INSERT INTO key_value (namespace,key,value) VALUES ('settings','password',?)", (json.dumps(sys.argv[1]),))
+con.commit(); con.close()
+PY
+
+    # 3) 重启 OmniRoute
+    omniroute stop 2>/dev/null
+    sleep 2
+    omniroute serve --daemon > "$HOME/.freecloudcode/logs/omniroute.log" 2>&1
+    sleep 6
+    if omniroute doctor --no-liveness >/dev/null 2>&1; then
+        echo "✓ OmniRoute 已重启，新管理密码已生效"
+    else
+        echo "⚠ OmniRoute 重启失败，请查看 ~/.freecloudcode/logs/omniroute.log"
+    fi
+    echo "  新密码: $pwd"
+    echo "  请立即保存；dashboard 登录用（http://<tailnet-ip>:20128）"
+}
+
 # ===== 状态显示 =====
 # display_status_line STATUS NAME HINT — 格式化显示一行状态
 display_status_line() {

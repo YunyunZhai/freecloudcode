@@ -177,6 +177,30 @@ install_npm_packages() {
     return $failed
 }
 
+# 确保 OmniRoute 管理密码不是默认 CHANGEME（新容器首次 serve 前写入强密码）
+# 注意：OmniRoute 只在"无已保存 hash"时迁移 INITIAL_PASSWORD；已运行过的容器请用 omni_passwd 重置
+setup_omniroute_env() {
+    local env_file="$HOME/.omniroute/.env"
+    if [ ! -f "$env_file" ]; then
+        log_warn "OmniRoute .env 不存在（首次 serve 后自动创建），可稍后运行 omni_passwd 设置强密码"
+        return 0
+    fi
+    if grep -q '^INITIAL_PASSWORD=' "$env_file"; then
+        log_success "OmniRoute 管理密码已配置（.env 含 INITIAL_PASSWORD）"
+        return 0
+    fi
+    local pwd
+    pwd=$(tr -dc 'A-HJ-NP-Za-km-z2-9' < /dev/urandom | head -c 24)
+    if [ -z "$pwd" ]; then
+        log_warn "OmniRoute 密码生成失败"
+        return 1
+    fi
+    printf '\nINITIAL_PASSWORD=%s\n' "$pwd" >> "$env_file"
+    chmod 600 "$env_file"
+    log_info "OmniRoute 管理密码已生成并写入 ~/.omniroute/.env: $pwd"
+    log_warn "请保存该密码；dashboard 登录用（或之后运行 omni_passwd 重置）"
+}
+
 # 安装 Node.js（空白容器可能没有 node/npm；npm 工具需要 Node 18+）
 install_node() {
     if check_command node && check_command npm; then
@@ -242,6 +266,7 @@ run_setup() {
         install_opencode || { echo $(( $(cat "$fail_count_file") + 1 )) > "$fail_count_file"; }
         install_orca || { echo $(( $(cat "$fail_count_file") + 1 )) > "$fail_count_file"; }
         install_npm_packages || { echo $(( $(cat "$fail_count_file") + 1 )) > "$fail_count_file"; }
+        setup_omniroute_env
         create_directories
 
         configure_claude_code_hooks
@@ -384,7 +409,7 @@ xorca() { tmux_stop orca "orca-ide serve"; echo "✓ Orca Server 已停止"; }
 if [[ $- == *i* ]] && [ -z "$_FCC_HINTS_PRINTED" ]; then
     export _FCC_HINTS_PRINTED=1
     echo "📌 cc(claude) codex oc(opencode) or(omniroute) orca-ide(Orca) cr(重连) fcc(状态)"
-    echo "   sor/xor(OmniRoute) sorca/xorca(Orca Server)"
+    echo "   sor/xor(OmniRoute) sorca/xorca(Orca Server) omni_passwd(重置OmniRoute密码)"
 fi
 
 # <<< FreeCloudCode <<<
@@ -448,7 +473,7 @@ sorca() {
 }
 xorca() { tmux_stop orca "orca-ide serve"; echo "✓ Orca Server 已停止"; }
 echo "📌 cc(claude) codex oc(opencode) or(omniroute) orca-ide(Orca) cr(重连) fcc(状态)"
-echo "   sor/xor(OmniRoute) sorca/xorca(Orca Server)"
+echo "   sor/xor(OmniRoute) sorca/xorca(Orca Server) omni_passwd(重置OmniRoute密码)"
 # <<< FreeCloudCode (zsh) >>>
 ZSHRC_BLOCK
         log_success "Shell 配置已写入 ~/.zshrc（zsh）"
